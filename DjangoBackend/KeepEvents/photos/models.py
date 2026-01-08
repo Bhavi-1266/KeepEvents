@@ -58,6 +58,21 @@ class Photo(models.Model):
     commentcount = models.PositiveIntegerField(
         default=0
     )
+
+    isProcessed = models.BooleanField(
+        default=False
+    )
+    Faces = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="List of user  detected in this photo  [{userid, username}]" 
+    )
+
+    FaceCount = models.PositiveIntegerField(
+        default=0
+    )
+
+
     def __str__(self):
         desc = self.photoDesc[:20] if self.photoDesc else ""
         return f"Photo {self.photoid}: {desc}"

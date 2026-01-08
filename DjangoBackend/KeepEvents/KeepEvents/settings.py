@@ -35,6 +35,8 @@ ALLOWED_HOSTS = []
 # ==============================================================================
 
 INSTALLED_APPS = [
+
+      "daphne",
     # Django built-in apps
     "django.contrib.sites",           # Required for allauth - manages multiple sites
     "django.contrib.auth",            # Authentication framework
@@ -63,7 +65,38 @@ INSTALLED_APPS = [
 
     # CORS Headers
     "corsheaders",                    # Cross-Origin Resource Sharing support
+
+    #celery 
+    "django_celery_results",
+
+    #sockets
+    "channels",
+    "realtime",
 ]
+
+# ==============================================================================
+# CELERY CONFIG
+# ==============================================================================
+
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_BACKEND = "django-db"
+
+# ==============================================================================
+# Web Sockets CONFIG
+# ==============================================================================
+
+ASGI_APPLICATION = "KeepEvents.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 
 # ==============================================================================
@@ -225,10 +258,15 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
-SESSION_COOKIE_SECURE = False      # True in production (HTTPS)
+SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SECURE = False
+
+
+
+# SESSION_COOKIE_SECURE = False      # True in production (HTTPS)
 CSRF_COOKIE_SECURE = False         # True in production
 
-SESSION_COOKIE_SAMESITE = "Lax"
+# SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_HTTPONLY = False
@@ -343,3 +381,17 @@ CORS_ALLOW_HEADERS = [
 ]
 
 FRONTEND_URL = "http://localhost:5173"
+
+#c==========================
+
+#       caching 
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}

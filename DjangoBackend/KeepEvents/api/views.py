@@ -10,6 +10,11 @@ from django_filters.rest_framework import DjangoFilterBackend, FilterSet, DateFi
 from .serializers import UserSerializer , EventSerializer , PhotoSerializer , commentSerializer, likedPhotoSerializer
 from .serializers import RegisterSerializer , downloadedPhotoSerializer, viewedPhotoSerializer
 
+from .utils import build_user_cache_key
+from django.core.cache import cache
+
+from realtime.utils import send_to_event 
+
 import hashlib
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -165,7 +170,7 @@ class UserViewSet(viewsets.ModelViewSet):
 from rest_framework.decorators import api_view, permission_classes
 
 @api_view(["POST"])
-@permission_classes([AllowAny()])
+@permission_classes([IsAuthenticated])
 def logout(request):
     response = Response(
         {"detail": "Logged out successfully"},
@@ -208,17 +213,20 @@ from guardian.models import UserObjectPermission
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
 
+
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Events.objects.all()
     serializer_class = EventSerializer
-    
+
     pagination_class = LimitOffsetPagination
     page_size = 10
     lookup_field = "eventid"
+
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["eventname", "eventlocation", "eventdesc" , "eventlocation"]
+    search_fields = ["eventname", "eventlocation", "eventdesc"]
+
     filterset_fields = {
-          "eventdate": ["exact", "gte", "lte", "range"],
+        "eventdate": ["exact", "gte", "lte", "range"],
         "eventCreator": ["exact"],
         "eventlocation": ["exact", "in"],
         "eventtime": ["exact"],
@@ -228,107 +236,146 @@ class EventViewSet(viewsets.ModelViewSet):
     ordering_fields = ["eventname", "eventdate", "eventtime", "eventlocation"]
     ordering = ["eventdate", "eventname", "eventtime", "eventlocation"]
 
+    # -------------------------
+    # CACHE INVALIDATION HELPERS
+    # -------------------------
 
+    def invalidate_events_cache_all_users(self):
+        cache.delete_pattern("v1:user:*:/api/events/*")
 
+    def invalidate_activity_summary(self, user_id):
+        cache.delete(f"v1:user:{user_id}:/api/users/me/activity-summary/")
+
+    # -------------------------
+    # QUERYSET
+    # -------------------------
 
     def get_queryset(self):
-        user = self.request.user
-
         return get_objects_for_user(
-            user=user,
+            user=self.request.user,
             perms="events.view_event_obj",
             klass=Events,
             with_superuser=True,
         )
-    
-    @action(detail=True, methods=['get'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
+
+    # -------------------------
+    # CACHED READS
+    # -------------------------
+
+    def list(self, request, *args, **kwargs):
+        cache_key = build_user_cache_key(request)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            cache.set(cache_key, response.data, timeout=300)
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=300)
+        return Response(serializer.data)
+
+    # -------------------------
+    # PERMISSION VIEWS (CACHED)
+    # -------------------------
+
+    @action(detail=True, methods=["get"], permission_classes=[CanEditEvent, IsAuthenticated])
     def viewers(self, request, eventid=None):
-        """Get users with view_event permission on this event"""
+        cache_key = build_user_cache_key(request)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         event = self.get_object()
-        viewers = get_users_with_perms(event, only_with_perms_in=['view_event_obj'])
-        serializer = UserSerializer(viewers, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
+        users = get_users_with_perms(event, only_with_perms_in=["view_event_obj"])
+        data = UserSerializer(users, many=True).data
+
+        cache.set(cache_key, data, timeout=300)
+        return Response(data)
+
+    @action(detail=True, methods=["get"], permission_classes=[CanEditEvent, IsAuthenticated])
     def editors(self, request, eventid=None):
-        """Get users with edit_event permission on this event"""
+        cache_key = build_user_cache_key(request)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         event = self.get_object()
-        editors = get_users_with_perms(event, only_with_perms_in=['change_event_obj'])
-        serializer = UserSerializer(editors, many=True)
-        return Response(serializer.data)
-    # views.py - Fix your remove actions:
-    @action(detail=True, methods=['delete'] , permission_classes=[CanEditEvent(), IsAuthenticated()])
-    def remove_viewer(self, request, eventid=None ):
+        users = get_users_with_perms(event, only_with_perms_in=["change_event_obj"])
+        data = UserSerializer(users, many=True).data
+
+        cache.set(cache_key, data, timeout=300)
+        return Response(data)
+
+    # -------------------------
+    # PERMISSION MUTATIONS
+    # -------------------------
+
+    @action(detail=True, methods=["delete"], permission_classes=[CanEditEvent, IsAuthenticated])
+    def remove_viewer(self, request, eventid=None):
         event = self.get_object()
-        userid = request.query_params.get('userid')  # ✅ From query params
-        user = get_object_or_404(get_user_model(), userid=userid)
-        remove_perm('view_event_obj', user, event)
+        user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
+        remove_perm("view_event_obj", user, event)
+
+        self.invalidate_events_cache_all_users()
+        self.invalidate_activity_summary(user.userid)
+
         return Response({"message": "Viewer removed"})
 
-    @action(detail=True, methods=['delete'] , permission_classes=[CanEditEvent(), IsAuthenticated()]) 
+    @action(detail=True, methods=["delete"], permission_classes=[CanEditEvent, IsAuthenticated])
     def remove_editor(self, request, eventid=None):
         event = self.get_object()
-        userid = request.query_params.get('userid')
-        user = get_object_or_404(get_user_model(), userid=userid)
-        remove_perm('change_event_obj', user, event)
+        user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
+        remove_perm("change_event_obj", user, event)
+
+        self.invalidate_events_cache_all_users()
+        self.invalidate_activity_summary(user.userid)
+
         return Response({"message": "Editor removed"})
 
-    
-    @action(
-        detail=True,
-        methods=["post"],
-        permission_classes=[IsAuthenticated(), CanSendInvitation()],
-    )
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, CanSendInvitation])
     def invite(self, request, eventid=None):
-        
         event = self.get_object()
-
-        role = request.data.get("role")
-        expires_at = request.data.get("expires_at")
-
-        if role not in ["viewer", "editor"]:
-            return Response({"error": "Invalid role"}, status=400)
 
         invite = EventInvite.objects.create(
             event=event,
-            role=role,
-            expires_at=expires_at,
+            role=request.data["role"],
+            expires_at=request.data.get("expires_at"),
         )
 
-        invite_url = f"{FRONTEND_URL}/invite/{invite.token}"
+        self.invalidate_events_cache_all_users()
 
         return Response({
-            "invite_url": invite_url,
-            "role": role,
+            "invite_url": f"{FRONTEND_URL}/invite/{invite.token}",
+            "role": invite.role,
         })
-    
 
-    def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            return [CanViewEvent(),IsAuthenticated() ]
-        if self.action == "create":
-            # only Admin or IMG Member may create events
-            return [IsAuthenticated() ]
-        # update/delete: owner or admin
-        if self.action in ["update", "partial_update"]:
-            return [IsAuthenticated(), CanEditEvent()]
-        # delete: owner or admin
-        if self.action == "destroy":
-            return [IsAuthenticated(), CanEditEvent()]  
-        return [IsAuthenticated()]
+    # -------------------------
+    # WRITE OPERATIONS
+    # -------------------------
 
     def perform_create(self, serializer):
-        user = self.request.user
-        visibility = serializer.validated_data.get("visibility", "private")
-        event = serializer.save(eventCreator=user)
-        CreateEventPerms(event, visibility, user)
+        event = serializer.save(eventCreator=self.request.user)
+        CreateEventPerms(event, serializer.validated_data.get("visibility", "private"), self.request.user)
+
+        self.invalidate_events_cache_all_users()
+        self.invalidate_activity_summary(self.request.user.userid)
 
     def perform_update(self, serializer):
-        visibility = self.request.data.get("visibility", None)
         event = serializer.save()
-        if visibility is not None:  
-            extra_users = self.request.data.get("extra_users", [])
-            set_event_perms(event, visibility, extra_user_ids=extra_users)
+
+        visibility = self.request.data.get("visibility")
+        if visibility:
+            set_event_perms(event, visibility, self.request.data.get("extra_users", []))
+
+        self.invalidate_events_cache_all_users()
+        self.invalidate_activity_summary(self.request.user.userid)
 
 
 from rest_framework.views import APIView
@@ -377,7 +424,7 @@ class PhotoFilter(FilterSet):
         return queryset.filter(extractedTags__contains=[value])
 
 
-
+from photos.task import process_photo_faces_store_users
 from .permissions import canViewPhoto , canEditPhoto , canDeletePhoto , canAddPhoto
 class PhotoViewSet(viewsets.ModelViewSet):
     """
@@ -427,6 +474,51 @@ class PhotoViewSet(viewsets.ModelViewSet):
         # 2. Return only photos belonging to those events
         return Photo.objects.filter(event__in=allowed_events)
 
+    def invalidate_all_users_cache(self):
+        prefix = f"v1:user:*:{self.request.path}"
+        cache.delete_pattern(prefix)
+
+        user_id = self.request.user.userid
+        cache.delete(
+        f"v1:user:{user_id}:/api/users/me/activity-summary/"
+        )
+
+
+
+    def list(self, request, *args, **kwargs):
+        cache_key = build_user_cache_key(request)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            cache.set(cache_key, response.data, timeout=120)
+            return response
+
+        serializer = self.get_serializer(queryset, many=True)
+        cache.set(cache_key, serializer.data, timeout=120)
+        return Response(serializer.data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        cache_key = build_user_cache_key(request)
+
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+
+        cache.set(cache_key, serializer.data, timeout=120)
+        return Response(serializer.data)
+
+
 
     # Permissions per action
     def get_permissions(self):
@@ -441,17 +533,24 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         return super().get_permissions()
 
+
+
     # Single create
     def perform_create(self, serializer):
         permission_classes = [IsAuthenticated , canAddPhoto]
+        self.invalidate_all_users_cache()
         serializer.save(uploadedBy=self.request.user)
+        
+
 
     # -------------------------
     # BULK CREATE
     # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-create")
+
     def bulk_create(self, request):
-        permission_classes = [IsAuthenticated , canAddPhoto ]
+        permission_classes = [IsAuthenticated, canAddPhoto]
+
         files = request.FILES.getlist("photoFile")
         descs = request.data.getlist("photoDesc")
         event_ids = request.data.getlist("event_id")
@@ -465,6 +564,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         created = []
         errors = []
+        affected_event_ids = set()   # 👈 IMPORTANT
 
         import json
 
@@ -474,26 +574,50 @@ class PhotoViewSet(viewsets.ModelViewSet):
             data = {
                 "photoFile": file,
                 "photoDesc": descs[i] if i < len(descs) else "",
-                "event_id": event_ids[i] if i < len(event_ids) else None,  # ✅ FIX
+                "event_id": event_ids[i] if i < len(event_ids) else None,
                 "extractedTags": extractedTags,
             }
 
             serializer = self.get_serializer(data=data)
             if serializer.is_valid():
-                serializer.save(uploadedBy=request.user)  # ✅ FIX
+                photo = serializer.save(uploadedBy=request.user)
+
+                # track affected events
+                affected_event_ids.add(photo.event.eventid)
+
+                # 🔥 background processing
+                process_photo_faces_store_users.delay(photo.photoid)
+
                 created.append(serializer.data)
             else:
                 errors.append({"index": i, "errors": serializer.errors})
+
+        # invalidate cache ONCE
+        self.invalidate_all_users_cache()
+
+        # 🔔 notify ALL viewers of affected events
+        for eventid in affected_event_ids:
+            send_to_event(
+                event_id=eventid,
+                event="event_photos_changed",
+                data={
+                    "eventid": eventid,
+                    "action": "Reload",
+                }
+            )
+
 
         return Response(
             {"created": created, "errors": errors},
             status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED
         )
 
+
     # -------------------------
     # BULK DELETE
     # -------------------------
     @action(detail=False, methods=["post"], url_path="bulk-delete")
+
     def bulk_delete(self, request):
         ids = request.data.get("photo_ids", [])
 
@@ -504,17 +628,37 @@ class PhotoViewSet(viewsets.ModelViewSet):
             )
 
         photos = Photo.objects.filter(pk__in=ids).select_related("event", "uploadedBy")
+
         deleted = []
         skipped = []
+        affected_event_ids = set()   # 👈 IMPORTANT
 
         perm_checker = canDeletePhoto()
 
         for photo in photos:
             if perm_checker.has_object_permission(request, self, photo):
                 deleted.append(photo.pk)
+
+                # track event BEFORE delete
+                affected_event_ids.add(photo.event.eventid)
+
                 photo.delete()
             else:
                 skipped.append(photo.pk)
+
+        # invalidate cache ONCE
+        self.invalidate_all_users_cache()
+
+        # 🔔 notify all viewers of affected events
+        for eventid in affected_event_ids:
+            send_to_event(
+                eventid,
+                "event_photos_changed",
+                {
+                    "eventid": eventid,
+                    "action": "reload",
+                }
+            )
 
         return Response(
             {"deleted": deleted, "skipped_no_permission": skipped},
@@ -541,7 +685,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
             liked = True
 
         photo.save(update_fields=["likecount"])
-
+        self.invalidate_all_users_cache()
         return Response(
             {"liked": liked, "likes": photo.likecount},
             status=status.HTTP_200_OK,
@@ -558,6 +702,11 @@ from collections import Counter
 def my_activity_summary(request):
     user = request.user
     photos = Photo.objects.filter(uploadedBy=user).select_related("event")
+    cache_key = build_user_cache_key(request)
+
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Response(cached)
 
     # ---- BASIC STATS ----
     stats = photos.aggregate(
@@ -597,8 +746,7 @@ def my_activity_summary(request):
         .annotate(photo_count=Count("photoid"))
         .order_by("-photo_count")[:5]
     )
-
-    return Response({
+    ResponseData = {
         "user": {
             "username": user.username,
             "email": user.email,
@@ -609,7 +757,12 @@ def my_activity_summary(request):
             "top_locations": top_locations,
             "major_events": list(major_events),
         },
-    })
+    }
+
+    # ---- CACHE ----
+    cache.set(cache_key,ResponseData , timeout=300)
+    
+    return Response(ResponseData)
 
 
 

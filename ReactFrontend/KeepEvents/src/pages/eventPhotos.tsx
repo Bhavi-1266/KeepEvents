@@ -15,6 +15,10 @@ import SelectionBar from "../components/selectionBar";
 import { toast } from "react-hot-toast";
 import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera } from "lucide-react";
 
+
+import { connectSocket , subscribe } from "../services/socket.ts";
+
+
 function EventPhotos() {
   const navigate = useNavigate();
   const { eventId } = useParams<{ eventId: string }>();
@@ -94,10 +98,43 @@ function EventPhotos() {
       } finally {
         setLoading(false);
       }
+
     };
 
     init();
   }, [eventId, navigate]);
+
+
+  useEffect(() => {
+      if (!currentUser) return;
+
+      connectSocket(currentUser.userid);
+
+    }, [currentUser]);
+
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    // 1️⃣ ensure socket exists (safe even if already connected)
+
+    // 2️⃣ listen for reload events
+    const unsubscribe = subscribe("event_photos_changed", (data) => {
+      
+      if (data.eventid !== Number(eventId)) return;
+      toast.success("Event updated");
+      // 🔥 reload photos only
+      LoadEventPhotos(Number(eventId), 0).then((photosData) => {
+        setPhotos(photosData.results || []);
+        setNextUrl(photosData.next || null);
+      });
+    });
+
+    return () => {
+      unsubscribe(); // ✅ explicit cleanup
+    };
+  }, [eventId]);
+
 
   // ✅ Load event people
   const loadEventPeople = async () => {

@@ -14,7 +14,10 @@ class PhotoAdmin(admin.ModelAdmin):
         'likecount',
         'viewcount',
         'downloadcount',
-        'commentcount'
+        'commentcount',
+        "Faces" ,
+        "FaceCount",
+        "isProcessed",  
     )
 
     list_display_links = ('photoid', 'small_thumb', 'short_desc')

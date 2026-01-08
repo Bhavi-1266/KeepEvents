@@ -183,7 +183,7 @@
           throw new Error("Failed to add comment. Please try again.");
         }
         else{
-          
+            
         setComments((prev) => [Comment, ...prev]);
         setNewComment("");
         }
@@ -328,6 +328,32 @@
 
                   
                 </div>
+
+                {photo.FaceCount > 0 && photo.Faces && (
+                  <div>
+                    <span className="font-semibold block mb-1">
+                      People in photo ({photo.FaceCount}):
+                    </span>
+
+                    <div className="flex flex-wrap gap-1">
+                      {photo.Faces.map((face) => (
+                        <span
+                          key={face.userid}
+                          className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-[10px] font-medium"
+                        >
+                          @{face.username}
+                        </span>
+                      ))}
+                    </div>
+
+                    {photo.HasUserFace && (
+                      <div className="mt-1 text-[10px] text-green-600 font-semibold">
+                        You are in this photo
+                      </div>
+                    )}
+                  </div>
+                )}
+
               </div>
 
               {/* Likes + Comments section */}

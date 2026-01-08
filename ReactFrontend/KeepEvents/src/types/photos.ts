@@ -1,6 +1,11 @@
 import type { User } from "./user.ts";
 import type { Event } from "./event.ts";
 
+export interface PhotoFaceUser {
+  userid: number;
+  username: string;
+}
+
 export interface Photo {
   photoid: number;
   photoFile: string | null;
@@ -16,13 +21,18 @@ export interface Photo {
   downloadcount: number | null;
   commentcount: number | null;
 
+  // face recognition
+  Faces: PhotoFaceUser[];      // [{ userid, username }]
+  FaceCount: number;
+  HasUserFace: boolean;
+
   // relations
   event: Event | null;
   uploadedBy: User | null;
 
-  // per-user
+  // per-user flags
   isLikedByCurrentUser: boolean;
-} 
+}
 
 
 export interface PhotoDraft {

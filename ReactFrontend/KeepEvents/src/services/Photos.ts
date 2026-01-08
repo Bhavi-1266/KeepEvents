@@ -326,7 +326,7 @@ export async function getLikes({
 
 
 // services/Photos.ts
-export async function addComment(commentText: string, photoId: number) : Promise<Response> {
+export async function addComment(commentText: string, photoId: number) : Promise<Comment> {
   const data = {
     photo_id: photoId,
     commentText: commentText,
@@ -339,7 +339,10 @@ export async function addComment(commentText: string, photoId: number) : Promise
     body: JSON.stringify(data),
   });
 
-  return response;
+  if (!response.ok) {
+    throw new Error("Failed to add comment");
+  }
+  return response.json();
 }
 
 

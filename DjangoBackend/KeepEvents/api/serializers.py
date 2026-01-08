@@ -183,7 +183,13 @@ class EventSerializer(serializers.ModelSerializer):
 class PhotoSerializer(serializers.ModelSerializer):
     likes = serializers.IntegerField(source="likecount", read_only=True)
     isLikedByCurrentUser = serializers.SerializerMethodField()
-    event = EventSerializer(read_only=True)        
+
+    # 👇 FACE RELATED
+    Faces = serializers.JSONField(read_only=True)
+    FaceCount = serializers.IntegerField(read_only=True)
+    HasUserFace = serializers.SerializerMethodField()
+
+    event = EventSerializer(read_only=True)
     uploadedBy = UserSerializer(read_only=True)
 
     event_id = serializers.PrimaryKeyRelatedField(
@@ -200,7 +206,7 @@ class PhotoSerializer(serializers.ModelSerializer):
             "photoDesc",
             "uploadDate",
 
-            # ✅ KEEP THESE (your point was correct)
+            # AI / metadata
             "extractedTags",
             "photoMeta",
 
@@ -210,23 +216,49 @@ class PhotoSerializer(serializers.ModelSerializer):
             "downloadcount",
             "commentcount",
 
+            # face tagging
+            "Faces",
+            "FaceCount",
+            "HasUserFace",
+
             # relations
             "event",
             "uploadedBy",
             "event_id",
 
-            # per-user flag
+            # per-user flags
             "isLikedByCurrentUser",
         ]
 
+    # -------------------------
+    # Like flag
+    # -------------------------
     def get_isLikedByCurrentUser(self, obj):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
 
-        # uses likedPhoto via related_name="likes"
         return obj.likes.filter(user=request.user).exists()
-  
+
+    # -------------------------
+    # Face flag (IMPORTANT)
+    # -------------------------
+    def get_HasUserFace(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        if not obj.Faces:
+            return False
+
+        user_id = request.user.userid
+
+        # Faces = [{userid, username}, ...]
+        return any(
+            face.get("userid") == user_id
+            for face in obj.Faces
+        )
+
 
 class UserForLikesCommentsSerializer(serializers.ModelSerializer):
     class Meta:

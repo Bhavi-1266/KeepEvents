@@ -158,3 +158,18 @@ def create_and_send_email_otp(user):
     to_email = [user.email]
 
     send_mail(subject, message, from_email, to_email)
+
+
+
+from urllib.parse import urlencode
+def build_user_cache_key(request):
+    user_id = request.user.userid
+
+    query_params = request.query_params.copy()
+    sorted_params = sorted(query_params.items())
+    normalized_query = urlencode(sorted_params)
+
+    path = request.path
+    full_key = f"user:{user_id}:{path}?{normalized_query}"
+
+    return full_key
