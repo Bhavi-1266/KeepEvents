@@ -16,7 +16,7 @@ import { toast } from "react-hot-toast";
 import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera } from "lucide-react";
 
 
-import { connectSocket , subscribe } from "../services/socket.ts";
+import { connectSocket , subscribe  , disconnectSocket} from "../services/socket.ts";
 
 
 function EventPhotos() {
@@ -90,8 +90,9 @@ function EventPhotos() {
         setError(null);
       } catch (err: any) {
         console.error("Load failed:", err);
+        navigate("/", { replace: true });
         if (err.message?.includes("401") || err.message?.includes("403")) {
-          navigate("/", { replace: true });
+          
         } else {
           setError(err.message || "Failed to load event");
         }
@@ -105,35 +106,62 @@ function EventPhotos() {
   }, [eventId, navigate]);
 
 
-  useEffect(() => {
+  // ✅ Connect to WebSocket ONCE when user is available
+    useEffect(() => {
       if (!currentUser) return;
 
       connectSocket(currentUser.userid);
 
-    }, [currentUser]);
+      // Cleanup on unmount only
+      return () => {
+        disconnectSocket();
+      };
+    }, [currentUser]); // Only reconnect if userId changes
 
+    // ✅ Subscribe to event photo changes
+    useEffect(() => {
+      if (!eventId) return;
 
-  useEffect(() => {
-    if (!eventId) return;
-
-    // 1️⃣ ensure socket exists (safe even if already connected)
-
-    // 2️⃣ listen for reload events
-    const unsubscribe = subscribe("event_photos_changed", (data) => {
-      
-      if (data.eventid !== Number(eventId)) return;
-      toast.success("Event updated");
-      // 🔥 reload photos only
-      LoadEventPhotos(Number(eventId), 0).then((photosData) => {
-        setPhotos(photosData.results || []);
-        setNextUrl(photosData.next || null);
+      const unsubscribe = subscribe("event_photos_changed", (data) => {
+        if (data.eventid !== Number(eventId)) return;
+        toast.success("Event updated");
+        
+        // Reload photos
+        LoadEventPhotos(Number(eventId), 0).then((photosData) => {
+          setPhotos(photosData.results || []);
+          setNextUrl(photosData.next || null);
+        });
       });
-    });
 
-    return () => {
-      unsubscribe(); // ✅ explicit cleanup
-    };
-  }, [eventId]);
+      return () => {
+        unsubscribe();
+      };
+    }, [eventId]);
+
+    // ✅ Subscribe to photo likes
+    useEffect(() => {
+      if (!currentUser) return;
+
+      const unsubscribe = subscribe("photo_liked", (data) => {
+        if (data.userid !== currentUser.userid) return;
+        // if (data.likedBy == currentUser.username) return;
+        toast.success(`${data.likedBy  } liked your photo`);
+        
+        setPhotos(prev => 
+          prev.map(p => 
+            p.photoid === data.photoid 
+              ? { ...p, likes: (p.likes || 0) + 1 } 
+              : p
+          )   
+        );
+
+        
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } , [currentUser?.userid]); // Only resubscribe if userId changes
 
 
   // ✅ Load event people
@@ -303,7 +331,9 @@ function EventPhotos() {
   };
 
   const canEditEvent = () => {
-    return event?.myrole === "owner" || event?.myrole === "editor" || userRole === 1;
+    console.log(event.myrole);
+    return event?.myrole === "owner" || event?.myrole === "editor";
+    
   };
 
   if (loading) {

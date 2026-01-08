@@ -1,4 +1,5 @@
     import { getAllPhotos, getSearchedFilteredSortedPhotos , getNextSetPhotos  , DeletePhotos} from "../services/Photos";
+    import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
     import { useEffect, useState  , useRef} from "react";
     import type { Photo } from "../types/photos";
     import PhotoCard from "../components/PhotoCard";
@@ -90,6 +91,39 @@
 
     return () => observer.disconnect();
     }, [nextUrl, fetchingMore]);
+
+
+    useEffect(() => {
+      if (!currentUser) return;
+
+      connectSocket(currentUser.userid);
+
+      // Cleanup on unmount only
+      return () => {
+        disconnectSocket();
+      };
+    }, [currentUser]); // Only reconnect if userId changes
+
+    
+
+    // ✅ Subscribe to photo likes
+    useEffect(() => {
+      if (!currentUser) return;
+
+      const unsubscribe = subscribe("photo_liked", (data) => {
+        if (data.userid !== currentUser.userid) return;
+        // if (data.likedBy == currentUser.username) return;
+        toast.success(`${data.likedBy  } liked your photo`);
+        
+      
+
+        
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } , [currentUser?.userid]); // Only resubscribe if userId changes
 
 
     /* ---------------- LOAD MORE ---------------- */

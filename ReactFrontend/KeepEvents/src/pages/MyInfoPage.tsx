@@ -1,6 +1,7 @@
 import NavBar from "../components/navBar";
 import { getMe } from "../services/auth";
 import { patchUserData, patchUserProfileImage } from "../services/user";
+import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
 import { useEffect, useRef, useState } from "react";
 import type { User, EditedData } from "../types/user";
 import { Pencil, Eraser, Save, X } from "lucide-react";
@@ -66,6 +67,39 @@ function MyInfoPage() {
     };
     load();
   }, []); // Empty dependency array = run only once on mount
+
+  useEffect(() => {
+      if (!user) return;
+
+      connectSocket(user.userid);
+
+      // Cleanup on unmount only
+      return () => {
+        disconnectSocket();
+      };
+    }, [user]); // Only reconnect if userId changes
+
+    
+
+    // ✅ Subscribe to photo likes
+    useEffect(() => {
+      if (!user) return;
+
+      const unsubscribe = subscribe("photo_liked", (data) => {
+        if (data.userid !== user.userid) return;
+        // if (data.likedBy == user.username) return;
+        toast.success(`${data.likedBy  } liked your photo`);
+        
+      
+
+        
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } , [user?.userid]); // Only resubscribe if userId changes
+
 
   // ==================== UPDATE A SINGLE FIELD ====================
   // Called when user types in an input field

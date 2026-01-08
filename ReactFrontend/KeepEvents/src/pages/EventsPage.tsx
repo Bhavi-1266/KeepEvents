@@ -1,4 +1,5 @@
 import { GetAllEvents , getSearchedFilteredSortedEvents } from "../services/events";
+import { connectSocket, disconnectSocket } from "../services/socket";
 import { useEffect, useState } from "react";
 import type { Event } from "../types/event";
 import EventCard from "../components/EventCard";
@@ -7,6 +8,8 @@ import CreateCard from "../components/CreateCard";
 import type {User}  from "../types/user";
 import {getMe} from "../services/auth"
 import NavBar from "../components/navBar";
+import { subscribe } from "../services/socket";
+import { toast } from "react-hot-toast";
 
 
 function EventsPage() {
@@ -69,6 +72,40 @@ function EventsPage() {
     getEvents();
 
   }, []);
+
+
+  useEffect(() => {
+      if (!currentUser) return;
+
+      connectSocket(currentUser.userid);
+
+      // Cleanup on unmount only
+      return () => {
+        disconnectSocket();
+      };
+    }, [currentUser]); // Only reconnect if userId changes
+
+    
+
+    // ✅ Subscribe to photo likes
+    useEffect(() => {
+      if (!currentUser) return;
+
+      const unsubscribe = subscribe("photo_liked", (data) => {
+        if (data.userid !== currentUser.userid) return;
+        // if (data.likedBy == currentUser.username) return;
+        toast.success(`${data.likedBy  } liked your photo`);
+        
+      
+
+        
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } , [currentUser?.userid]); // Only resubscribe if userId changes
+
 
   if (loading) {
     return <p>Loading...</p>;

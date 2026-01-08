@@ -14,7 +14,7 @@ import { toast } from "react-hot-toast";
 import { getMe } from "../services/auth";
 import { getAllPhotos, getSearchedFilteredSortedPhotos, getNextSetPhotos, DeletePhotos  , getLikes, getComments} from "../services/Photos";
 import { GetAllEvents, getSearchedFilteredSortedEvents } from "../services/events";
-
+import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
 import type { User } from "../types/user";
 import type { Photo , Like , Comment } from "../types/photos";
 import type { Event } from "../types/event";
@@ -132,6 +132,39 @@ function HomePage() {
     return () => observer.disconnect();
   }, [recentNextUrl, loadingMore]);
 
+
+  useEffect(() => {
+        if (!user) return;
+  
+        connectSocket(user.userid);
+  
+        // Cleanup on unmount only
+        return () => {
+          disconnectSocket();
+        };
+      }, [user]); // Only reconnect if userId changes
+  
+      
+  
+      // ✅ Subscribe to photo likes
+      useEffect(() => {
+        if (!user) return;
+  
+        const unsubscribe = subscribe("photo_liked", (data) => {
+          if (data.userid !== user.userid) return;
+          // if (data.likedBy == user.username) return;
+          toast.success(`${data.likedBy  } liked your photo`);
+          
+        
+  
+          
+        });
+  
+        return () => {
+          unsubscribe();
+        };
+      } , [user?.userid]); // Only resubscribe if userId changes
+  
   const loadMoreRecent = async () => {
     if (loadingMore || !recentNextUrl) return;
     setLoadingMore(true);

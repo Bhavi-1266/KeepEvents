@@ -21,6 +21,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from guardian.shortcuts import get_objects_for_user
 from .utils import set_event_perms
+from realtime.utils import send_to_event , send_to_user
 
 from django.db.models import Q
 
@@ -251,12 +252,23 @@ class EventViewSet(viewsets.ModelViewSet):
     # -------------------------
 
     def get_queryset(self):
-        return get_objects_for_user(
-            user=self.request.user,
+
+
+
+        user = self.request.user
+        
+        # 1. Get IDs of events where the user has explicit Guardian permissions
+        allowed_by_perm = get_objects_for_user(
+            user=user,
             perms="events.view_event_obj",
             klass=Events,
             with_superuser=True,
-        )
+        ).values_list('eventid', flat=True)
+
+        # 2. Return events that are either Public OR in the allowed permission list
+        return Events.objects.filter(
+            Q(visibility="public") | Q(eventid__in=allowed_by_perm)
+        ).distinct()
 
     # -------------------------
     # CACHED READS
@@ -464,24 +476,34 @@ class PhotoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # 1. Get events user can view
-        allowed_events = get_objects_for_user(
-            user,
-            "events.view_event_obj",
-            Events,
-        )
+        # 1. Get IDs of events where the user has explicit Guardian permissions
+        # (Covers: Private events they were invited to, and events they created/edit)
+        permitted_event_ids = get_objects_for_user(
+            user=user,
+            perms="events.view_event_obj",
+            klass=Events,
+            with_superuser=True,
+        ).values_list('eventid', flat=True)
 
-        # 2. Return only photos belonging to those events
-        return Photo.objects.filter(event__in=allowed_events)
+        # 2. Filter Photos based on the Event's status
+        # Return photos if:
+        # - The parent event is 'public'
+        # - OR the parent event ID is in the user's permitted list
+        return Photo.objects.filter(
+            Q(event__visibility="public") | Q(event__eventid__in=permitted_event_ids)
+        ).select_related("event", "uploadedBy").distinct()
 
+
+
+    # In PhotoViewSet
     def invalidate_all_users_cache(self):
-        prefix = f"v1:user:*:{self.request.path}"
-        cache.delete_pattern(prefix)
-
+        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
+        # The '*' is the wildcard for the user_id part
+        cache.delete_pattern("user:*:/api/photos/*")
+        
+        # Also clear the activity summary for the person who liked it
         user_id = self.request.user.userid
-        cache.delete(
-        f"v1:user:{user_id}:/api/users/me/activity-summary/"
-        )
+        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
 
 
 
@@ -685,12 +707,27 @@ class PhotoViewSet(viewsets.ModelViewSet):
             liked = True
 
         photo.save(update_fields=["likecount"])
+        
+        # CRITICAL: Clear cache for everyone because the 'likecount' changed for everyone
+        # and 'isLiked' changed for this specific user.
         self.invalidate_all_users_cache()
+        if (liked):
+            send_to_user(
+                user_id=photo.uploadedBy.userid,
+                event="photo_liked",
+                data={
+                    "photoid": photo.photoid,
+                    "userid": photo.uploadedBy.userid,
+                    "action": "liked",
+                    "likedBy": user.username,
+                }
+            )
+                
+
         return Response(
             {"liked": liked, "likes": photo.likecount},
             status=status.HTTP_200_OK,
         )
-
 
 
 
