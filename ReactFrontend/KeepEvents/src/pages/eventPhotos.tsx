@@ -1,6 +1,6 @@
 import { LoadEventPhotos, GetNextPhotos, EventData, getEventViewers } from "../services/events.ts";
 import {getEventEditors, patchEventData, patchEventCoverImage , createEventInvite } from "../services/events.ts";
-import { DeletePhotos } from "../services/Photos.ts";
+import { DeletePhotos ,getAllPhotos , getNextSetPhotos} from "../services/Photos.ts";
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { Photo } from "../types/photos.ts";
 import PhotoCard from "../components/PhotoCard.tsx";
@@ -53,11 +53,18 @@ function EventPhotos() {
   const [userRole, setUserRole] = useState<number>(3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
 
   // Event people
   const [viewers, setViewers] = useState<any[]>([]);
   const [editors, setEditors] = useState<any[]>([]);
   const [loadingPeople, setLoadingPeople] = useState(false);
+
+  //Search & filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [FindMe , setFindMe] = useState(false);
+  const [Sort , setSort] = useState("");
+
 
   // ✅ Load initial data
   useEffect(() => {
@@ -218,12 +225,45 @@ function EventPhotos() {
     return () => observer.disconnect();
   }, [nextUrl, fetchingMore]);
 
+  useEffect(() => {
+    GetSortedPhotos();
+  }
+  , [Sort , FindMe]);
+
+
+  const GetSortedPhotos = async () => {
+    
+    if (!eventId) return;
+    setLoadingPhotos(true);
+    try {
+      const data = await getAllPhotos({
+        offset: 0,
+        limit: 20,
+        ordering: Sort,
+        filters: { event_id: eventId  , FindMe: FindMe ? "true" : "false" },
+      });
+      setPhotos(data.results || []);
+      setNextUrl(data.next || null);
+    } catch (err: any) {
+      console.error("Load failed:", err);
+      if (err.message?.includes("401") || err.message?.includes("403")) {
+        navigate("/", { replace: true });
+      } else {
+        setError(err.message || "Failed to load event");
+      }
+    } finally {
+      setLoadingPhotos(false);
+    }
+  }
+
+
+
   // ✅ Load more
   const loadMore = useCallback(async () => {
     if (fetchingMore || !nextUrl) return;
     setFetchingMore(true);
     try {
-      const data = await GetNextPhotos(nextUrl);
+      const data = await getNextSetPhotos(nextUrl);
       setPhotos(prev => [...prev, ...(data.results || [])]);
       setNextUrl(data.next || null);
     } catch {
@@ -414,6 +454,8 @@ function EventPhotos() {
               </div>
             )}
           </div>
+
+          
 
           {/* Event Details Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -640,38 +682,75 @@ function EventPhotos() {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-6 pb-20">
-        {photos.length === 0 ? (
+
+
+      {/* Search and Sort */}
+          <div className="max-w-7xl mx-auto px-6 ">
+            <div className="flex items-center justify-end gap-4 mb-4">
+              
+              <button
+                onClick={() => setFindMe(!FindMe)}
+                className={`px-4 py-2 rounded-lg ${
+                  FindMe ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                Find Me
+              </button>
+              <p>Sort BY: </p>
+              <select
+                value={Sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-2"
+              >
+                <option value="-uploadDate">Newest First</option>
+                <option value="photoid">Oldest First</option>
+                <option value="-likecount">Most Liked</option>
+                <option value="-commentcount">Most Commented</option>
+                <option value="-FaceCount">Most People</option>
+              </select>
+            </div>
+          </div>
+      {  loadingPhotos ? (
+        <div className="max-w-7xl mx-auto px-6 pb-20">
           <div className="text-center py-24">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-4">No photos yet</h3>
-            {canEditEvent() && (
-              <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
-            )}
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Loading photos...</p>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {canEditEvent() && (
-              <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
-            )}
-            {photos.map((photo) => (
-              <PhotoCard
-                key={photo.photoid}
-                photo={photo}
-                selected={selectedIds.has(photo.photoid)}
-                selectionMode={selectionMode}
-                onToggleSelect={toggleSelect}
-                onClick={() => !selectionMode && setSelectedPhoto(photo)}
-              />
-            ))}
-          </div>
-        )}
-
-        <div ref={sentinelRef} className="h-12 flex items-center justify-center py-8">
-          {fetchingMore && <span className="text-gray-500">Loading more…</span>}
-          {!nextUrl && photos.length > 0 && <span className="text-gray-400">All photos loaded</span>}
         </div>
-      </div>
+      ) :  
+       ( <div className="max-w-7xl mx-auto px-6 pb-20">
+          {photos.length === 0 ? (
+            <div className="text-center py-24">
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">No photos yet</h3>
+              {canEditEvent() && (
+                <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {canEditEvent() && (
+                <CreateCard ToCreate="Photo" onClick={() => setShowAddPhotos(true)} />
+              )}
+              {photos.map((photo) => (
+                <PhotoCard
+                  key={photo.photoid}
+                  photo={photo}
+                  selected={selectedIds.has(photo.photoid)}
+                  selectionMode={selectionMode}
+                  onToggleSelect={toggleSelect}
+                  onClick={() => !selectionMode && setSelectedPhoto(photo)}
+                />
+              ))}
+            </div>
+          )}
 
+          <div ref={sentinelRef} className="h-12 flex items-center justify-center py-8">
+            {fetchingMore && <span className="text-gray-500">Loading more…</span>}
+            {!nextUrl && photos.length > 0 && <span className="text-gray-400">All photos loaded</span>}
+          </div>
+        </div>
+        )
+      }
       {/* Modals & Dialogs */}
       {selectedPhoto && !selectionMode && (
         <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />

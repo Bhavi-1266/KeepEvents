@@ -32,10 +32,10 @@ class PhotoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('photoDesc', 'photoFile', 'image_preview')
+            'fields': ('photoDesc', 'photoFile', 'image_preview', 'uploadDate', 'photoid')
         }),
         ('Relations', {
-            'fields': ('event', 'uploadedBy')
+            'fields': ('event', 'uploadedBy', 'likecount', 'viewcount', 'downloadcount', 'commentcount')
         }),
         ('Metadata', {
             'fields': ('extractedTags', 'photoMeta')

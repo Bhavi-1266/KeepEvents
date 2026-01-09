@@ -1,455 +1,490 @@
-    import { getAllPhotos, getSearchedFilteredSortedPhotos , getNextSetPhotos  , DeletePhotos} from "../services/Photos";
-    import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
-    import { useEffect, useState  , useRef} from "react";
-    import type { Photo } from "../types/photos";
-    import PhotoCard from "../components/PhotoCard";
-    import HighlightPhoto from "../components/HighlightPhoto";
-    import SelectionBar from "../components/selectionBar";
-    import { toast } from "react-hot-toast";
-    import { useNavigate } from "react-router-dom";
-    import type { User } from "../types/user";
-    import { getMe } from "../services/auth";
-    import NavBar from "../components/navBar";
+import { getAllPhotos, getSearchedFilteredSortedPhotos, getNextSetPhotos, DeletePhotos } from "../services/Photos";
+import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
+import { useEffect, useState, useRef } from "react";
+import type { Photo } from "../types/photos";
+import PhotoCard from "../components/PhotoCard";
+import HighlightPhoto from "../components/HighlightPhoto";
+import SelectionBar from "../components/selectionBar";
+import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import type { User } from "../types/user";
+import { getMe } from "../services/auth";
+import NavBar from "../components/navBar";
+import { Search, Calendar } from "lucide-react";
 
-    function PhotosGallery() {
-    const navigate = useNavigate();
+function PhotosGallery() {
+  const navigate = useNavigate();
 
-    const [photos, setPhotos] = useState<Photo[]>([]);
-    const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
-    const [selectedIds , setselectedIds] = useState<Set<number>>(new Set());
-    const selectionMode = selectedIds.size > 0;
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const selectionMode = selectedIds.size > 0;
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [Sort, setSort] = useState("-uploadDate");
+  const [FindMe, setFindMe] = useState(false);
+  const [startingDate, setStartingDate] = useState("");
+  const [endingDate, setEndingDate] = useState("");
+  const [showDateFilters, setShowDateFilters] = useState(false);
 
-    const [search, setSearch] = useState("");
-    const [sort, setSort] = useState("");
-    const [startingDate, setStartingDate] = useState("");
-    const [endingDate, setEndingDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-    const [error, setError] = useState<string | null>(null);
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
 
-    const [loading, setLoading] = useState(true);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [fetchingMore, setFetchingMore] = useState(false);
 
-    const [filterApplied , setFilterApplied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-    const [nextUrl , setNextUrl] = useState<string | null>(null);
-    const sentinelRef  = useRef<HTMLDivElement | null>(null);
-    const [fetchingMore , setFetchingMore] = useState(false);
+  const [UserRole, setUserRole] = useState<number>(3);
 
-    const [confirmDelete, setConfirmDelete] = useState(false);
-    const [deleting, setDeleting] = useState(false);
+  /* ---------------- AUTH ---------------- */
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const me = await getMe();
+        setCurrentUser(me.user);
+        setUserRole(me.user.groups[0]);
+        const data = await getAllPhotos({ offset: 0, ordering: Sort });
+        setPhotos(data.results);
+        setNextUrl(data.next);
+      } catch (err: any) {
+        setError(err.message);
+        navigate("/");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const [UserRole , setUserRole] = useState<number>(3);
+    init();
+  }, [navigate]);
 
-    // ✅ DRF-compatible ordering fields
-    const sorts = [
-        { value: "uploadDate", label: "Upload Date ↑" },
-        { value: "-uploadDate", label: "Upload Date ↓" },
-        { value: "photoid", label: "Photo ID ↑" },
-        { value: "-photoid", label: "Photo ID ↓" },
-    ];
-
-    /* ---------------- AUTH ---------------- */
-    useEffect(() => {
-        const init = async () => {
-        try {
-            const me = await getMe();
-            setCurrentUser(me.user);
-            setUserRole(me.user.groups[0]);
-            const data = await getAllPhotos( { offset: 0 } );
-            setPhotos(data.results);
-            setNextUrl(data.next);
-        } catch (err: any) {
-            setError(err.message);
-            navigate("/");
-        } finally {
-            setLoading(false);
-        }
-        };
-
-        init();
-    }, [navigate]);
-
-    useEffect(() => {
+  useEffect(() => {
     if (!sentinelRef.current) return;
 
     const observer = new IntersectionObserver(
-        (entries) => {
+      (entries) => {
         if (entries[0].isIntersecting) {
-            loadMore();
+          loadMore();
         }
-        },
-        {
+      },
+      {
         root: null,
         rootMargin: "200px",
         threshold: 0.1,
-        }
+      }
     );
 
     observer.observe(sentinelRef.current);
 
     return () => observer.disconnect();
-    }, [nextUrl, fetchingMore]);
+  }, [nextUrl, fetchingMore]);
 
+  useEffect(() => {
+    if (!currentUser) return;
 
-    useEffect(() => {
-      if (!currentUser) return;
+    connectSocket(currentUser.userid);
 
-      connectSocket(currentUser.userid);
+    return () => {
+      disconnectSocket();
+    };
+  }, [currentUser]);
 
-      // Cleanup on unmount only
-      return () => {
-        disconnectSocket();
-      };
-    }, [currentUser]); // Only reconnect if userId changes
+  useEffect(() => {
+    if (!currentUser) return;
 
-    
+    const unsubscribe = subscribe("photo_liked", (data) => {
+      if (data.userid !== currentUser.userid) return;
+      toast.success(`${data.likedBy} liked your photo`);
+    });
 
-    // ✅ Subscribe to photo likes
-    useEffect(() => {
-      if (!currentUser) return;
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser?.userid]);
 
-      const unsubscribe = subscribe("photo_liked", (data) => {
-        if (data.userid !== currentUser.userid) return;
-        // if (data.likedBy == currentUser.username) return;
-        toast.success(`${data.likedBy  } liked your photo`);
-        
-      
+  // Apply filters when Sort or FindMe changes
+  useEffect(() => {
+    applyFilters();
+  }, [Sort, FindMe]);
 
-        
+  /* ---------------- LOAD MORE ---------------- */
+  const loadMore = async () => {
+    if (fetchingMore || !nextUrl) {
+      return;
+    }
+    setFetchingMore(true);
+    try {
+      const data = await getNextSetPhotos(nextUrl);
+      setPhotos((prev) => [...prev, ...data.results]);
+      setNextUrl(data.next);
+    } catch (err: any) {
+      setError(err.message || "Failed to load more photos");
+    } finally {
+      setFetchingMore(false);
+    }
+  };
+
+  /* ------------- APPLY FILTERS ------------- */
+  const applyFilters = async () => {
+    setLoadingPhotos(true);
+    try {
+      const data = await getAllPhotos({
+        offset: 0,
+        limit: 20,
+        ordering: Sort,
+        filters: {
+          search: searchQuery,
+          date_after: startingDate,
+          date_before: endingDate,
+          FindMe: FindMe ? "true" : "false",
+        },
       });
 
-      return () => {
-        unsubscribe();
-      };
-    } , [currentUser?.userid]); // Only resubscribe if userId changes
 
+      setPhotos(data.results);
+      setNextUrl(data.next);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to load photos");
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
 
-    /* ---------------- LOAD MORE ---------------- */
-    const loadMore = async () => {
-        if (fetchingMore || !nextUrl) {
-        return;
-        }
-        setFetchingMore(true);
-        try {
-        const data = await getNextSetPhotos(nextUrl);
-        setPhotos((prev) => [...prev, ...data.results]);
-        setNextUrl(data.next);
-        } catch (err: any) {
-        setError(err.message || "Failed to load more photos");
-        } finally
-        {
-        setFetchingMore(false);
-        }
-    };
+  const reset = async () => {
+    setLoadingPhotos(true);
+    try {
+      setSearchQuery("");
+      setSort("-uploadDate");
+      setFindMe(false);
+      setStartingDate("");
+      setEndingDate("");
+      setShowDateFilters(false);
 
-    /* ------------- APPLY FILTERS ------------- */
-    const applyFilters = async () => {
-        try {
-        const data = await getSearchedFilteredSortedPhotos({
-            search,
-            ordering: sort,
-            date_after: startingDate,
-            date_before: endingDate,
+      const data = await getAllPhotos({ offset: 0, ordering: "-uploadDate" });
+      setPhotos(data.results);
+      setNextUrl(data.next);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to load photos");
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleClear = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    setDeleting(true);
+    try {
+      const res = await DeletePhotos([...selectedIds]);
+
+      const deletedCount = res.deleted?.length ?? 0;
+      const skippedCount = res.skipped_no_permission?.length ?? 0;
+
+      if (deletedCount > 0) {
+        toast.success(`Deleted ${deletedCount} photo${deletedCount > 1 ? "s" : ""}`);
+      }
+
+      if (skippedCount > 0) {
+        toast(`Skipped ${skippedCount} photo${skippedCount > 1 ? "s" : ""} (no permission)`, {
+          icon: "⚠️",
+          style: {
+            background: "#fff7ed",
+            color: "#92400e",
+          },
         });
+      }
 
-        setPhotos(data.results);
-        setNextUrl(data.next);
-        setFilterApplied(true);
-        setError(null);
-        } catch (err: any) {
-        setError(err.message || "Failed to load photos");
-        }
-    };
+      if (deletedCount === 0 && skippedCount > 0) {
+        toast("No photos were deleted", { icon: "ℹ️" });
+      }
 
-    const reset = async () => {
-        try {
-        const data = await getAllPhotos( { offset: 0} );
-        setPhotos(data.results);
-        setNextUrl(data.next);
-        setFilterApplied(false);
-        setError(null);
-        } catch (err: any) {
-        setError(err.message || "Failed to load photos");
-        }
-    };
+      setPhotos((prev) => prev.filter((photo) => !res.deleted.includes(photo.photoid)));
 
-    const toggleSelect = (id: number) => {
-        setselectedIds(prev => {
-            const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
-            return next;
-        });
-        };
+      handleClear();
+    } catch (err) {
+      toast.error("Failed to delete selected photos");
+      console.error(err);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
 
-        const handleClear = () => {
-            setselectedIds(new Set());
-        };
-
-        const handleDelete = async () => {
-            if (selectedIds.size === 0) return;
-            
-            try {
-                const res = await DeletePhotos([...selectedIds]);
-
-                const deletedCount = res.deleted?.length ?? 0;
-                const skippedCount = res.skipped_no_permission?.length ?? 0;
-
-                // ✅ Success toast
-                if (deletedCount > 0) {
-                toast.success(
-                    `Deleted ${deletedCount} photo${deletedCount > 1 ? "s" : ""}`
-                );
-                }
-
-                // ⚠️ Warning toast
-                if (skippedCount > 0) {
-                toast(
-                    `Skipped ${skippedCount} photo${skippedCount > 1 ? "s" : ""} (no permission)`,
-                    {
-                    icon: "⚠️",
-                    style: {
-                        background: "#fff7ed",
-                        color: "#92400e",
-                    },
-                    }
-                );
-                }
-
-                // ℹ️ Informational case
-                if (deletedCount === 0 && skippedCount > 0) {
-                toast("No photos were deleted", { icon: "ℹ️" });
-                }
-
-                // 🧹 Update UI (remove deleted photos)
-                setPhotos(prev =>
-                prev.filter(photo => !res.deleted.includes(photo.photoid))
-                );
-
-                // Reset selection
-                handleClear();
-                
-
-            } catch (err) {
-                toast.error("Failed to delete selected photos");
-                console.error(err);
-            } finally {
-                setDeleting(false);
-                setConfirmDelete(false);
-            }
-            };
-
-
-    if (loading) return <p>Loading...</p>;
-    if (!currentUser) return <p>Not logged in</p>;
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-gray-50">
-        <NavBar />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-        {/* HEADER */}
-        <h1 className="text-xl font-bold text-center p-4">
-            Photos Gallery
-        </h1>
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-red-500 text-xl">Not logged in</p>
+      </div>
+    );
+  }
 
-        {/* FILTER BAR */}
-        <div className="mx-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex flex-wrap gap-4 items-end">
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <NavBar />
 
-            {/* Search */}
-            <input
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-6 pt-8 pb-6">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Photos Gallery</h1>
+        <p className="text-gray-600">Browse and discover all your photos</p>
+      </div>
+
+      {/* Selection Bar */}
+      {selectionMode && (
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <SelectionBar
+            count={selectedIds.size}
+            onClear={handleClear}
+            onDelete={() => setConfirmDelete(true)}
+          />
+        </div>
+      )}
+
+      {/* Search, Sort & Filters */}
+      <div className="max-w-7xl mx-auto px-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          {/* Main Controls Row */}
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            {/* Search Bar */}
+            <div className="flex-1 min-w-[300px] relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
                 type="text"
-                placeholder="Search photos"
-                className="w-64 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-            />
+                placeholder="Search photos..."
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+              />
+            </div>
 
-            {/* Sort */}
-            <select
-                defaultValue=""
-                onChange={(e) => setSort(e.target.value)}
-                className="w-56 p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+            {/* Find Me Toggle */}
+            <button
+              onClick={() => setFindMe(!FindMe)}
+              className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                FindMe
+                  ? "bg-blue-500 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
             >
-                <option value="" disabled>Sort</option>
-                {sorts.map((s) => (
-                <option key={s.value} value={s.value}>
-                    {s.label}
-                </option>
-                ))}
-            </select>
+              Find Me
+            </button>
 
-            {/* Date Range */}
-            <div className="flex gap-3 items-end">
-                <div className="flex flex-col gap-1">
+            {/* Date Filter Toggle */}
+            <button
+              onClick={() => setShowDateFilters(!showDateFilters)}
+              className={`px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all ${
+                showDateFilters || startingDate || endingDate
+                  ? "bg-emerald-500 text-white shadow-md"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Calendar size={18} />
+              Date Range
+            </button>
+          </div>
+
+          {/* Date Range Filters (Collapsible) */}
+          {showDateFilters && (
+            <div className="flex gap-4 items-end pt-4 border-t">
+              <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">From</label>
                 <input
-                    type="date"
-                    value={startingDate}
-                    onChange={(e) => setStartingDate(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  type="date"
+                  value={startingDate}
+                  onChange={(e) => setStartingDate(e.target.value)}
+                  className="w-40 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                 />
-                </div>
+              </div>
 
-                <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-700">To</label>
                 <input
-                    type="date"
-                    value={endingDate}
-                    min={startingDate}
-                    onChange={(e) => setEndingDate(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  type="date"
+                  value={endingDate}
+                  min={startingDate}
+                  onChange={(e) => setEndingDate(e.target.value)}
+                  className="w-40 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                 />
-                </div>
-            </div>
+              </div>
 
-            {/* Apply */}
-            <button
-                onClick={() => {
-                    if (selectionMode) return;
-                    applyFilters();
-                }}
-                disabled={selectionMode}
-                className={`
-                    h-10 px-6 font-semibold rounded-lg shadow-sm transition
-                    ${
-                    selectionMode
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                    }
-                `}
-                >
-                Apply
-                </button>
-
+              {(startingDate || endingDate) && (
                 <button
-                onClick={() => {
-                    if (selectionMode) return;
-                    reset();
-                }}
-                disabled={selectionMode}
-                className={`
-                    h-10 px-6 font-semibold rounded-lg shadow-sm transition
-                    ${
-                    selectionMode
-                        ? filterApplied? "bg-gray-300 text-gray-500 cursor-not-allowed" : "hidden"
-                        : filterApplied
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : "hidden"
-                    }
-                `}
+                  onClick={() => {
+                    setStartingDate("");
+                    setEndingDate("");
+                  }}
+                  className="px-4 py-3 text-red-600 hover:bg-red-50 rounded-xl font-semibold"
                 >
-                Reset
+                  Clear Dates
                 </button>
-
-            
+              )}
             </div>
-        </div>
+          )}
 
-        {/* ERROR */}
-        {error && (
-            <p className="text-red-500 text-center mt-4">
+          {/* Sort & Action Buttons Row */}
+          <div className="flex items-center justify-between gap-4 pt-4 border-t">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700">Sort by:</label>
+              <select
+                value={Sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="border border-gray-300 rounded-xl px-4 py-2 bg-white focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="-uploadDate">Newest First</option>
+                <option value="uploadDate">Oldest First</option>
+                <option value="-likecount">Most Liked</option>
+                <option value="-commentcount">Most Commented</option>
+                <option value="-FaceCount">Most People</option>
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={applyFilters}
+                disabled={selectionMode || loadingPhotos}
+                className={`px-6 py-2 font-semibold rounded-xl transition ${
+                  selectionMode || loadingPhotos
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+                }`}
+              >
+                {loadingPhotos ? "Applying..." : "Apply Filters"}
+              </button>
+
+              {(searchQuery || FindMe || startingDate || endingDate || Sort !== "-uploadDate") && (
+                <button
+                  onClick={reset}
+                  disabled={selectionMode || loadingPhotos}
+                  className={`px-6 py-2 font-semibold rounded-xl transition ${
+                    selectionMode || loadingPhotos
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-700 text-white shadow-md"
+                  }`}
+                >
+                  Reset All
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
             {error}
-            </p>
-        )}
-            {selectionMode && (
-                <SelectionBar
-                    count={selectedIds.size}
-                    onClear={handleClear}
-                    onDelete={() => {
-                    setConfirmDelete(true);
-                    console.log([...selectedIds]);
-                    }}
-                />
-            )}
+          </div>
+        </div>
+      )}
 
-        {/* GRID */}
-        <div
-            className="
-            grid
-            grid-cols-1
-            sm:grid-cols-2
-            lg:grid-cols-3
-            xl:grid-cols-4
-            gap-6
-            p-6
-            max-w-7xl
-            mx-auto
-            "
-        >
-            {photos.map((photo) => (
+      {/* Photos Grid */}
+      {loadingPhotos ? (
+        <div className="max-w-7xl mx-auto px-6 pb-20">
+          <div className="text-center py-24">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Loading photos...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto px-6 pb-20">
+          {photos.length === 0 ? (
+            <div className="text-center py-24">
+              <div className="text-6xl mb-4">📸</div>
+              <h3 className="text-2xl font-semibold text-gray-900 mb-2">No photos found</h3>
+              <p className="text-gray-600">Try adjusting your filters or search terms</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {photos.map((photo) => (
                 <PhotoCard
-                    key={photo.photoid}
-                    photo={photo}
-                    selected={selectedIds.has(photo.photoid)}
-                    selectionMode={selectionMode}
-                    onToggleSelect={toggleSelect}
-                    onClick={() => {
+                  key={photo.photoid}
+                  photo={photo}
+                  selected={selectedIds.has(photo.photoid)}
+                  selectionMode={selectionMode}
+                  onToggleSelect={toggleSelect}
+                  onClick={() => {
                     if (!selectionMode) {
-                        setSelectedPhoto(photo);
+                      setSelectedPhoto(photo);
                     }
-                    }}
+                  }}
                 />
-            ))}
+              ))}
+            </div>
+          )}
 
-        </div>
-
-        <div
-            ref={sentinelRef}
-            className="h-12 flex items-center justify-center"
-            >
+          <div ref={sentinelRef} className="h-12 flex items-center justify-center py-8">
             {fetchingMore && <span className="text-gray-500">Loading more…</span>}
-            {!nextUrl && <span className="text-gray-400">No more photos</span>}
+            {!nextUrl && photos.length > 0 && <span className="text-gray-400">All photos loaded</span>}
+          </div>
         </div>
+      )}
 
+      {/* Highlight Modal */}
+      {selectedPhoto && !selectionMode && (
+        <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />
+      )}
 
-        {/* HIGHLIGHT MODAL */}
-        {selectedPhoto &&!selectionMode && (
-            <HighlightPhoto
-            photo={selectedPhoto}
-            onClick={() => setSelectedPhoto(null)}
-            />
-        )}
-
-        {confirmDelete && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
-            <div
-                className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Delete photo?
-                </h3>
-
-                <p className="text-sm text-gray-600 mb-4">
-                This action is <strong>permanent</strong>.  
-                The photo cannot be recovered.
-                </p>
-
-                <div className="flex justify-end gap-3">
-                <button
-                    className="px-4 py-2 rounded border"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleting}
-                >
-                    Cancel
-                </button>
-
-                <button
-                    className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                >
-                    {deleting ? "Deleting…" : "Yes, delete"}
-                </button>
-                </div>
+      {/* Delete Confirmation Modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md">
+            <h3 className="text-2xl font-bold mb-4">
+              Delete {selectedIds.size} photo{selectedIds.size !== 1 ? "s" : ""}?
+            </h3>
+            <p className="text-gray-600 mb-6">This action is permanent and cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 px-6 py-3 border rounded-xl hover:bg-gray-50"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
             </div>
-            </div>
-        )}
+          </div>
         </div>
-    );
-    }
+      )}
+    </div>
+  );
+}
 
-    export default PhotosGallery;
-    
+export default PhotosGallery;

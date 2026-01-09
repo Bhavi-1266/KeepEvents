@@ -88,14 +88,14 @@ function HomePage() {
           offset: 0,
           ordering: "-likes", 
           // Add user filter if your service supports it
-            filters: { user: me.user.id } 
+            filters: { user: me.user.userid } 
         });
         setMyLikes(myLikesData.results?.slice(0, 4) || []);
 
         // ✅ FIXED: My Comments (user-filtered)
         const myCommentsData = await getComments({ 
           photoId: 0, // Dummy - gets ALL comments
-          filters: { userid: me.user.id }, // Your user filter
+          filters: { user: me.user.userid }, // Your user filter
           limit: 5,
           ordering: "-commentedAt"
         });
@@ -210,161 +210,83 @@ function HomePage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p>Loading...</p></div>;
+if (loading)
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#fefae0]/40">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-[#bc6c25] border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-black uppercase tracking-widest text-[#606c38]">
+          Loading Dashboard
+        </p>
+      </div>
+    </div>
+  );
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavBar />
+  /* Using a 30% opacity of your theme yellow for a "cream" paper feel */
+  <div className="min-h-screen bg-[#fefae0]/30 font-sans text-[#283618]">
+    <NavBar />
 
-      <div className="max-w-7xl mx-auto py-6 px-6 space-y-12 pb-16">
-        {/* HERO + QUICK ACTIONS */}
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-3xl p-8">
-            <h1 className="text-3xl font-bold">Welcome back, {user.username}</h1>
-            <p className="opacity-90 mt-1">{user.email}</p>
-          </div>
-
-          {/* QUICK ACTIONS - Inline */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button onClick={() => navigate("/photos")} className="group bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-2xl p-6 text-left transition-all shadow-lg border border-white/20">
-              <div className="text-2xl mb-2">📸</div>
-              <div className="font-semibold">All Photos</div>
-              <div className="text-sm opacity-90 group-hover:translate-x-1 transition-transform">Browse gallery</div>
-            </button>
-            <button onClick={() => navigate("/events")} className="group bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-2xl p-6 text-left transition-all shadow-lg border border-white/20">
-              <div className="text-2xl mb-2">📅</div>
-              <div className="font-semibold">Events</div>
-              <div className="text-sm opacity-90 group-hover:translate-x-1 transition-transform">Active events</div>
-            </button>
-            <button onClick={() => navigate("/Activity")} className="group bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-2xl p-6 text-left transition-all shadow-lg border border-white/20">
-              <div className="text-2xl mb-2">👤</div>
-              <div className="font-semibold">My Activity</div>
-              <div className="text-sm opacity-90 group-hover:translate-x-1 transition-transform">Likes & comments</div>
-            </button>
-            {userRole === 1 && (
-              <button onClick={() => navigate("/EventsCreate")} className="group bg-emerald-500/20 hover:bg-emerald-500/30 backdrop-blur-sm rounded-2xl p-6 text-left transition-all shadow-lg border border-emerald-400/30">
-                <div className="text-2xl mb-2">➕</div>
-                <div className="font-semibold text-emerald-100">Create</div>
-                <div className="text-sm opacity-90 group-hover:translate-x-1 transition-transform">New event</div>
-              </button>
-            )}
+    <div className="mx-auto py-11.5 px-25 space-y-12 pb-15">
+      
+      {/* HERO + QUICK ACTIONS */}
+      <div className="space-y-6">
+        <div className="relative bg-[#283618] text-[#fefae0] rounded-xl p-7.5 overflow-hidden shadow-xl border border-[#606c38]">
+          <div className="relative z-10">
+            <h1 className="text-4xl font-black tracking-tighter uppercase">Welcome back, {user.username}</h1>
+            <div className="flex items-center gap-2 mt-2 opacity-80">
+              <div className="w-1.5 h-1.5 bg-[#dda15e]"></div>
+              <p className="font-bold text-xs tracking-widest uppercase">{user.email}</p>
+            </div>
           </div>
         </div>
 
-        {/* TRENDING PHOTOS - Inline Grid */}
-        {trendingPhotos.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                🔥 Trending Photos
-              </h2>
-              <button onClick={() => navigate("/photos")} className="text-blue-600 hover:underline font-medium">
-                View all →
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {trendingPhotos.map((photo) => (
-                <div key={photo.photoid} className="group">
-                  <PhotoCard
-                    photo={photo}
-                    selected={selectedIds.has(photo.photoid)}
-                    selectionMode={selectionMode}
-                    onToggleSelect={toggleSelect}
-                    onClick={() => !selectionMode && setSelectedPhoto(photo)}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* QUICK ACTIONS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
+          {[
+            { label: "All Photos", sub: "Browse gallery", path: "/photos" },
+            { label: "Events", sub: "Active events", path: "/events" },
+            { label: "My Activity", sub: "Likes & comments", path: "/Activity" },
+          ].map((action, i) => (
+            <button 
+              key={i}
+              onClick={() => navigate(action.path)} 
+              /* White cards on the light cream background create a clean depth effect */
+              className="group bg-white border border-[#dda15e]/20 rounded-xl p-4.5 text-left transition-all hover:border-[#bc6c25] hover:shadow-md"
+            >
+              <div className="font-black text-[#283618] text-lg uppercase tracking-tight">{action.label}</div>
+              <div className="text-[#606c38] text-xs font-bold uppercase tracking-wide group-hover:translate-x-1 transition-transform">{action.sub}</div>
+            </button>
+          ))}
 
-        {/* FAVORITE EVENTS - Inline */}
-        {favoriteEvents.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                ⭐ Favorite Events
-              </h2>
-              <button onClick={() => navigate("/events")} className="text-blue-600 hover:underline font-medium">
-                View all →
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {favoriteEvents.map((event) => (
-                <EventCard
-                  key={event.eventid}
-                  event={event}
-                  onClick={() => navigate(`/events/${event.eventid}`)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+          {userRole === 1 && (
+            <button 
+              onClick={() => navigate("/EventsCreate")} 
+              className="group bg-[#bc6c25] rounded-xl p-4.5 text-left transition-all shadow-lg hover:bg-[#283618]"
+            >
+              <div className="font-black text-[#fefae0] text-lg uppercase tracking-tight">Create</div>
+              <div className="text-[#fefae0]/80 text-xs font-bold uppercase tracking-wide group-hover:translate-x-1 transition-transform">New event</div>
+            </button>
+          )}
+        </div>
+      </div>
 
-        {/* MY ACTIVITY - Inline Grid */}
-        <section>
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">⚡ My Activity</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* My Likes */}
+      {/* TRENDING PHOTOS */}
+      {trendingPhotos.length > 0 && (
+        <section className="animate-in fade-in duration-500">
+          <div className="flex items-end justify-between mb-6 px-1">
             <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">❤️ Recent Likes</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {myLikes.map((like: any) => (
-                  <LikesCard
-                    key={like.photoId}
-                    photo={{
-                      photoid: like.photo.photoid,
-                      photoFile: like.photo.photoFile,
-                      likecount: like.photo.likecount || 0,
-                    }
-                    }
-                    isLikedByCurrentUser={true}
-                  />
-                ))}
-              </div>
+              <span className="text-[#bc6c25] font-black text-[10px] uppercase tracking-[0.3em]">Trending</span>
+              <h2 className="text-2xl font-black text-[#283618] tracking-tighter uppercase">Popular Pics</h2>
             </div>
-
-            {/* My Comments - Mock data, replace with API */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">💬 Recent Comments</h3>
-              <div className="space-y-3">
-                {myComments.map((comment: any) => (
-                  <CommentsCard
-                    key={comment.id}
-                    comment={{
-                      id: comment.id,
-                      commentText: comment.commentText,
-                      commentedAt: comment.commentedAt,
-                      photo: {
-                        photoid: comment.photo?.photoid || 0,
-                        photoFile: comment.photo?.photoFile || '',
-                        title: comment.photo?.title
-                      }
-                    }}
-                    onDelete={(commentId) => {
-                      setMyComments(prev => prev.filter(c => c.id !== commentId));
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* RECENT PHOTOS - Inline Horizontal Scroll */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              🕒 Recently Added
-            </h2>
-            <button onClick={() => navigate("/photos")} className="text-blue-600 hover:underline font-medium">
-              View all →
+            <button onClick={() => navigate("/photos")} className="px-5 py-2 bg-white border border-[#dda15e]/30 text-[#283618] rounded-lg text-xs font-black uppercase tracking-widest hover:bg-[#fefae0] transition-all">
+              View all
             </button>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {recentPhotos.map((photo) => (
-              <div key={photo.photoid} className="min-w-[200px] flex-shrink-0 hover:scale-105 transition-transform">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4.5">
+            {trendingPhotos.map((photo) => (
+              <div key={photo.photoid} className="transition-transform duration-300">
                 <PhotoCard
                   photo={photo}
                   selected={selectedIds.has(photo.photoid)}
@@ -375,85 +297,137 @@ function HomePage() {
               </div>
             ))}
           </div>
-          <div ref={recentSentinelRef} className="h-12 flex items-center justify-center mt-4 text-sm text-gray-500">
-            {loadingMore && "Loading more…"}
-            {!recentNextUrl && recentPhotos.length > 0 && "All caught up!"}
-          </div>
         </section>
+      )}
 
-        {/* ACTIVE EVENTS - Compact Grid */}
-        {events.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                🎯 Active Events
-              </h2>
-              <button onClick={() => navigate("/events")} className="text-blue-600 hover:underline font-medium">
-                View all →
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {events.slice(0, 12).map((event) => (
-                <EventCard
-                  key={event.eventid}
-                  event={event}
-                  onClick={() => navigate(`/events/${event.eventid}`)}
-                />
+      {/* RECENT ACTIVITY BENTO BOX */}
+      {/* Lightest green tint (#606c38 at 5%) for the container to separate it from the cream background */}
+      <section className="bg-[#606c38]/5 rounded-2xl p-7.5 border border-[#606c38]/10">
+        <div className="flex items-center gap-3 mb-8">
+            <div className="h-6 w-1 bg-[#bc6c25]"></div>
+            <h2 className="text-2xl font-black text-[#283618] tracking-tighter uppercase">My Activity</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-9">
+          {/* My Likes */}
+          <div>
+            <h3 className="text-xs font-black text-[#606c38] uppercase tracking-widest mb-4">Recent Likes</h3>
+            {myLikes.length === 0 && <p className="text-xs text-gray-400 italic font-medium tracking-wide">No liked assets yet.</p>}
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {myLikes.map((like: any) => (
+                <div key={like.photoId} className="rounded-lg overflow-hidden shadow-sm bg-white p-1">
+                   <LikesCard
+                    photo={{
+                      photoid: like.photo.photoid,
+                      photoFile: like.photo.photoFile,
+                      likecount: like.photo.likecount || 0,
+                    }}
+                    isLikedByCurrentUser={true}
+                  />
+                </div>
               ))}
             </div>
-          </section>
-        )}
+          </div>
 
-        {/* SELECTION BAR */}
-        {selectionMode && (
-          <SelectionBar
-            count={selectedIds.size}
-            onClear={handleClear}
-            onDelete={() => setConfirmDelete(true)}
-          />
-        )}
-      </div>
-
-      {/* MODALS */}
-      {selectedPhoto && !selectionMode && (
-        <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />
-      )}
-
-      {/* DELETE CONFIRM */}
-      {confirmDelete && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Delete photos?</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              This action is <strong>permanent</strong>. {selectedIds.size} photo(s) will be deleted.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className="px-4 py-2 rounded border"
-                onClick={() => setConfirmDelete(false)}
-                disabled={deleting}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? "Deleting…" : "Yes, delete"}
-              </button>
+          {/* My Comments */}
+          <div>
+            <h3 className="text-xs font-black text-[#606c38] uppercase tracking-widest mb-4">Recent Comments</h3>
+            <div className="space-y-3">
+              {myComments.length === 0 && <p className="text-xs text-gray-400 italic font-medium tracking-wide">No comments recorded.</p>}
+              {myComments.map((comment: any) => (
+                <div key={comment.id} className="bg-white p-4 rounded-lg shadow-sm border border-[#dda15e]/20 hover:border-[#bc6c25] transition-colors">
+                  <CommentsCard
+                    comment={comment}
+                    onDelete={(id) => setMyComments(prev => prev.filter(c => c.id !== id))}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      )}
+      </section>
 
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
-          {error}
+      {/* RECENTLY ADDED */}
+      <section>
+        <div className="flex items-center justify-between mb-6 px-1">
+           <h2 className="text-2xl font-black text-[#283618] tracking-tighter uppercase">Recently Added</h2>
         </div>
+        <div className="flex gap-4.5 overflow-x-auto pb-6 scrollbar-hide px-1 h-72">
+          {recentPhotos.map((photo) => (
+            <div key={photo.photoid} className="min-w-[200px] flex-shrink-0 group">
+              <div className="group-hover:-translate-y-1 transition-transform duration-300">
+                <PhotoCard
+                  photo={photo}
+                  selected={selectedIds.has(photo.photoid)}
+                  selectionMode={selectionMode}
+                  onToggleSelect={toggleSelect}
+                  onClick={() => !selectionMode && setSelectedPhoto(photo)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div ref={recentSentinelRef} className="h-15 flex flex-col items-center justify-center">
+          {loadingMore && <div className="w-6 h-6 border-2 border-[#bc6c25] border-t-transparent rounded-full animate-spin"></div>}
+          {!recentNextUrl && recentPhotos.length > 0 && (
+            <div className="text-[#606c38]/40 text-[10px] font-black uppercase tracking-[0.4em]">
+              Archive Complete 
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* SELECTION BAR */}
+      {selectionMode && (
+        <SelectionBar
+          count={selectedIds.size}
+          onClear={handleClear}
+          onDelete={() => setConfirmDelete(true)}
+        />
       )}
     </div>
-  );
+
+    {/* MODALS & OVERLAYS */}
+    {selectedPhoto && !selectionMode && (
+      <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />
+    )}
+
+    {/* DELETE CONFIRM */}
+    {confirmDelete && (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#283618]/90 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-xl font-black text-[#283618] text-center mb-2 uppercase">Confirm Deletion</h3>
+          <p className="text-center text-gray-500 text-sm mb-6 leading-relaxed">
+            This action is permanent. <span className="font-bold text-red-600">{selectedIds.size} asset(s)</span> will be purged from the archive.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              className="w-full py-3 bg-red-600 text-white rounded-lg font-black uppercase tracking-widest text-xs hover:bg-red-700 transition-colors"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Purging..." : "Confirm Purge"}
+            </button>
+            <button
+              className="w-full py-3 bg-[#fefae0] text-[#283618] rounded-lg font-black uppercase tracking-widest text-xs hover:bg-[#dda15e]/30 transition-colors"
+              onClick={() => setConfirmDelete(false)}
+              disabled={deleting}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {error && (
+      <div className="fixed bottom-10 right-10 bg-red-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 font-black uppercase text-xs tracking-widest">
+        {error}
+      </div>
+    )}
+  </div>
+);
 }
 
 export default HomePage;

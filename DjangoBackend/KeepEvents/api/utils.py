@@ -137,7 +137,6 @@ from django.conf import settings
 from users.models import EmailOTP
 
 def generate_otp(length=6):
-    
     return "".join(random.choice("0123456789") for _ in range(length))
 
 def create_and_send_email_otp(user):

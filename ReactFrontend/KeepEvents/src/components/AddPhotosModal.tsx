@@ -80,94 +80,50 @@ function AddPhotosModal({ eventId, onClose , sucessCallback, failureCallback }: 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl p-6 overflow-y-auto max-h-[90vh]">
+  <div className="fixed inset-0 bg-[#283618]/95 flex flex-col z-[200] animate-in fade-in duration-300">
+    <div className="flex items-center justify-between p-6 border-b border-[#606c38]/50">
+      <h2 className="text-[#fefae0] text-2xl font-black uppercase tracking-tighter">Import <span className="text-[#dda15e]">Assets</span></h2>
+      <div className="flex gap-4">
+        <button onClick={onClose} className="px-6 py-2 text-[#fefae0]/60 hover:text-[#fefae0] font-bold uppercase tracking-widest text-xs">Discard</button>
+        <button onClick={uploadAll} className="px-8 py-2 bg-[#bc6c25] text-[#fefae0] font-black uppercase tracking-widest text-xs hover:bg-[#dda15e] transition-colors">Push to Cloud ({photos.length})</button>
+      </div>
+    </div>
 
-        <h2 className="text-xl font-bold mb-4">
-          Ohh wanna Add Pictures
-        </h2>
-
-        <input
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="bg-blue-200 p-2 rounded-md cursor-pointer hover:bg-blue-300"
-        />
+    <div className="flex-1 overflow-y-auto p-6 bg-[#fefae0]">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* Upload Trigger */}
+        <label className="border-4 border-dashed border-[#dda15e]/30 flex flex-col items-center justify-center py-12 px-6 cursor-pointer hover:bg-[#dda15e]/5 transition-colors group">
+          <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="hidden" />
+          <span className="text-4xl group-hover:scale-110 transition-transform">📂</span>
+          <span className="mt-4 font-black uppercase tracking-[0.2em] text-[#283618]">Select Local Files</span>
+        </label>
 
         {photos.map((photo, index) => (
-          <div key={index} className="flex gap-4 mb-4 border p-3 rounded">
-            <img
-              src={URL.createObjectURL(photo.file)}
-              className="w-32 h-32 object-cover rounded"
-            />
-
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Description"
-                className="border p-2 w-full mb-2"
-                value={photo.photoDesc}
-                onChange={(e) =>
-                  updatePhoto(index, { photoDesc: e.target.value })
-                }
-              />
-
-              <input
-                type="text"
-                placeholder="Tags (comma separated)"
-                className="border p-2 w-full"
-                value={photo.extractedTags.join(",")}
-                onChange={(e) =>
-                  updatePhoto(index, {
-                    extractedTags: e.target.value
-                      .split(",")
-                      .map(t => t.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-
-              {photo.isTagging && (
-                <p className="text-sm text-gray-500 mt-1">
-                  🔍 Auto-tagging image…
-                </p>
-              )}
-
-              <button
-                className="bg-red-500 px-2 py-1 rounded text-white mt-2"
-                onClick={() =>
-                  setPhotos(prev =>
-                    prev.filter((_, i) => i !== index)
-                  )
-                }
-              >
-                Remove
-              </button>
+          <div key={index} className="flex gap-0 bg-white border border-[#283618]/10 h-40 shadow-sm">
+            <img src={URL.createObjectURL(photo.file)} className="w-40 h-full object-cover border-r border-[#283618]/10" />
+            <div className="flex-1 p-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <input
+                  type="text" placeholder="Add Description..."
+                  className="w-full bg-transparent border-b border-[#dda15e]/30 p-1 text-sm outline-none focus:border-[#bc6c25]"
+                  value={photo.photoDesc}
+                  onChange={(e) => updatePhoto(index, { photoDesc: e.target.value })}
+                />
+                <input
+                  type="text" placeholder="Tags: nature, party, summer..."
+                  className="w-full bg-transparent border-b border-[#dda15e]/30 p-1 text-[10px] font-bold text-[#606c38] outline-none"
+                  value={photo.extractedTags.join(",")}
+                  onChange={(e) => updatePhoto(index, { extractedTags: e.target.value.split(",").map(t => t.trim()) })}
+                />
+              </div>
+              <button onClick={() => setPhotos(prev => prev.filter((_, i) => i !== index))} className="text-[10px] font-black uppercase tracking-widest text-red-500 self-end">Remove</button>
             </div>
           </div>
         ))}
-
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 border rounded">
-            Cancel
-          </button>
-
-          <button
-            onClick={uploadAll}
-            disabled={isUploading}
-            className={`px-4 py-2 rounded text-white ${
-              isUploading
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {isUploading ? "Uploading…" : "Upload All"}
-          </button>
-        </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default AddPhotosModal;

@@ -107,206 +107,222 @@ function EventsPage() {
     } , [currentUser?.userid]); // Only resubscribe if userId changes
 
 
-  if (loading) {
-    return <p>Loading...</p>;
+ if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fefae0]/40">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-[#bc6c25] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-black uppercase tracking-widest text-[#606c38]">
+            Loading Events
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!currentUser) {
-    return <p>Not logged in</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fefae0]/40">
+        <p className="text-[#606c38] font-black uppercase tracking-widest text-xs">
+          Not logged in
+        </p>
+      </div>
+    );
   }
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-          <NavBar />
-            <div className="mx-6 mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex flex-wrap gap-4 items-end">
+  // Define the search handler to be used by the form
+  const handleSearchSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevents page reload
+    try {
+      const data = await getSearchedFilteredSortedEvents({
+        search: Search,
+        eventlocation: locationToFilter,
+        ordering: sort,
+        eventDateFrom: startingDate,
+        eventDateTo: endingDate
+      });
+      setEvents(data.results);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-            <input 
+  return (
+    <div className="min-h-screen bg-[#fefae0]/30 font-sans text-[#283618]">
+      <NavBar />
+      
+      <div className="max-w-[1400px] mx-auto px-6 pt-8 pb-12">
+        
+        {/* Page Header */}
+        <div className="mb-8 flex items-end justify-between">
+           <div>
+              <span className="text-[#bc6c25] font-black text-[10px] uppercase tracking-[0.3em]">Discover</span>
+              <h1 className="text-4xl font-black text-[#283618] tracking-tighter uppercase mt-1">Events</h1>
+           </div>
+        </div>
+
+        {/* Filter Container */}
+        <div className="bg-white rounded-xl shadow-xl shadow-[#283618]/5 border border-[#dda15e]/20 p-6 mb-10">
+          
+          {/* Wrapped in form to enable "Enter" key submission */}
+          <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 items-end">
+            
+            {/* Search Input */}
+            <div className="flex-1 min-w-[220px]">
+              <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
+                Search
+              </label>
+              <input 
                 type="text"
-                placeholder="Search events"
-                className="w-64 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                onChange={(e) => {
-                setSearch(e.target.value);
-                }
-                }
+                placeholder="SEARCH EVENTS..."
+                className="w-full bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] placeholder:text-[#606c38]/40 outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
+                onChange={(e) => setSearch(e.target.value)}
                 value={Search}
-            />
+              />
+            </div>
+
+            {/* Location Select */}
+            <div className="w-full sm:w-auto">
+               <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
+                Add Location
+              </label>
               <select 
-              defaultValue=""
+                defaultValue=""
                 onChange={(e) => {
-                    
-                        const value = e.target.value;
-
-                        if (!locationToFilter.includes(value)) {
-                        setLocationToFilter([...locationToFilter, value]);
-                        }
-
-                        e.target.selectedIndex = 0;
-                    
+                    const value = e.target.value;
+                    if (!locationToFilter.includes(value)) {
+                      setLocationToFilter([...locationToFilter, value]);
+                    }
+                    e.target.selectedIndex = 0;
                 }} 
-                name = "location"
-                className="w-56 p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                name="location"
+                className="w-full sm:w-56 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide appearance-none cursor-pointer"
               >
-                <option value="" disabled>All locations</option>
+                <option value="" disabled>SELECT LOCATION</option>
                 {[...locations].map(location => (
                   <option key={location} value={location}>{location}</option>
                 ))}
               </select>
+            </div>
 
+            {/* Sort Select */}
+            <div className="w-full sm:w-auto">
+               <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
+                Sort By
+              </label>
               <select
                 defaultValue=""
-                onChange={(e) => {
-                    setSort(e.target.value);
-                }}
+                onChange={(e) => setSort(e.target.value)}
                 name="sort"
-                className="w-56 p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full sm:w-56 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide appearance-none cursor-pointer"
                 >
-                    <option value="" disabled>
-                        Sort
-                    </option>
-
+                    <option value="" disabled>DEFAULT</option>
                     {sorts.map((sort) => (
                         <option key={sort.value} value={sort.value}>
                         {sort.label}
                         </option>
                     ))}
               </select>
+            </div>
 
-
-                <div className="flex gap-3 items-end">
-                {/* Start Date */}
-                <div className="flex flex-col gap-1">
-                    <label
-                    htmlFor="start-date"
-                    className="text-sm font-medium text-gray-700"
-                    >
-                    From
-                    </label>
-                    <input
-                    id="start-date"
-                    type="date"
-                    value={startingDate}
-                    onChange={(e) => setStartingDate(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                </div>
-
-                {/* End Date */}
-                <div className="flex flex-col gap-1">
-                    <label
-                    htmlFor="end-date"
-                    className="text-sm font-medium text-gray-700"
-                    >
-                    To
-                    </label>
-                    <input
-                    id="end-date"
-                    type="date"
-                    value={endingDate}
-                    min={startingDate}   // prevents invalid range
-                    onChange={(e) => setEndingDate(e.target.value)}
-                    className="w-40 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                </div>
-                </div>
-
-
-
-
-            <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            onClick={async () => {
-                try {
-                const data = await getSearchedFilteredSortedEvents({
-                    search: Search,
-                    eventlocation: locationToFilter,
-                    ordering: sort,
-                    eventDateFrom: startingDate,
-                    eventDateTo: endingDate
-                });
-
-                setEvents(data.results); // or data.results (see note below)
-                } catch (err) {
-                console.error(err);
-                }
-            }}
-            >
-            Search
-            </button>
-
+            {/* Date Range */}
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div>
+                <label htmlFor="start-date" className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
+                  From
+                </label>
+                <input
+                  id="start-date"
+                  type="date"
+                  value={startingDate}
+                  onChange={(e) => setStartingDate(e.target.value)}
+                  className="w-full sm:w-36 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-3 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
+                />
               </div>
-                <div  className="flex flex-row gap-4">
-                    <div>locations : </div>
-                    <div className="flex flex-row gap-4">
-                        {locationToFilter.map(location => (
-                            <div
-                            key={location}
-                            className="flex items-center gap-2 px-3 py-1 bg-gray-200 rounded-full text-sm"
+
+              <div>
+                <label htmlFor="end-date" className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
+                  To
+                </label>
+                <input
+                  id="end-date"
+                  type="date"
+                  value={endingDate}
+                  min={startingDate} 
+                  onChange={(e) => setEndingDate(e.target.value)}
+                  className="w-full sm:w-36 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-3 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
+                />
+              </div>
+            </div>
+
+            {/* Search Button (Type Submit) */}
+            <button
+              type="submit" 
+              className="w-full sm:w-auto h-[42px] bg-[#bc6c25] hover:bg-[#283618] text-[#fefae0] rounded-lg px-8 text-xs font-black uppercase tracking-widest transition-all hover:shadow-lg active:scale-95"
+            >
+              Search
+            </button>
+          </form>
+
+          {/* Active Location Chips */}
+          {locationToFilter.length > 0 && (
+             <div className="mt-6 pt-4 border-t border-[#dda15e]/20 flex flex-wrap items-center gap-3">
+                <span className="text-[10px] font-bold text-[#bc6c25] uppercase tracking-widest">Active Filters:</span>
+                <div className="flex flex-wrap gap-2">
+                    {locationToFilter.map(location => (
+                        <div
+                        key={location}
+                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-[#283618] text-[#fefae0] rounded-lg text-[10px] font-bold uppercase tracking-wide"
+                        >
+                            <span>{location}</span>
+                            <button
+                                type="button" 
+                                onClick={() => { setLocationToFilter(locationToFilter.filter(loc => loc !== location)); }}
+                                className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-[#bc6c25] text-[#fefae0] transition-colors"
                             >
-                                <span>{location}</span>
-
-                                <button
-                                    onClick={() => { setLocationToFilter(locationToFilter.filter(loc => loc !== location)); }}
-                                    className="w-4 h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-xs leading-none cursor-pointer hover:bg-red-600 z-10"
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                        ))}
-                    </div>
+                                ×
+                            </button>
+                        </div>
+                    ))}
                 </div>
             </div>
-          {error && (
-            <p className="text-red-500 text-center mb-4">
-              {error}
-            </p>
           )}
+        </div>
 
-          {events.length === 0 ? (
+        {error && (
+          <p className="text-red-600 font-bold uppercase text-xs tracking-widest text-center mb-6 bg-red-100 py-2 rounded">
+            {error}
+          </p>
+        )}
 
-            <div className="
-                grid
-                grid-cols-1
-                sm:grid-cols-2
-                lg:grid-cols-3
-                xl:grid-cols-4
-                gap-6
-                p-6
-                max-w-7xl
-                mx-auto
-                relative
-                ">
-                {<CreateCard ToCreate="Event" onClick={() => navigate("/EventsCreate")} />}
-                
-                </div>
-          ) : (
-                <div className="
-                grid
-                grid-cols-1
-                sm:grid-cols-2
-                lg:grid-cols-3
-                xl:grid-cols-4
-                gap-6
-                p-6
-                max-w-7xl
-                mx-auto
-                relative
-                ">
-                {<CreateCard ToCreate="Event" onClick={() => navigate("/EventsCreate")} />}
-                {events.map((event) => (
+        {/* Events Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative">
+            {/* Create Card */}
+            <div className="h-full min-h-[300px]">
+                 <CreateCard ToCreate="Event" onClick={() => navigate("/EventsCreate")} />
+            </div>
+            
+            {/* Render Events */}
+            {events.length > 0 ? (
+                events.map((event) => (
                     <EventCard
-                    key={event.eventid}
-                    event={event}
-    
-                    onClick={() => navigate(`/Events/${event.eventid}`)}
+                        key={event.eventid}
+                        event={event}
+                        onClick={() => navigate(`/Events/${event.eventid}`)}
                     />
-                ))}
+                ))
+            ) : (
+                /* Empty State (if not initial load) */
+                <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex items-center justify-center h-full min-h-[300px] border-2 border-dashed border-[#606c38]/20 rounded-xl">
+                     <span className="text-[#606c38] text-xs font-bold uppercase tracking-widest opacity-60">
+                        No events found
+                     </span>
                 </div>
             )}
+        </div>
       </div>
-
-    );
+    </div>
+  );
 }
 
 export default EventsPage;

@@ -15,7 +15,7 @@ function CreateCard({ ToCreate, onClick }: CreateCardProps) {
 
     <div
       onClick={onClick}
-      className="flex flex-col justify-center   max-w-sm  rouded-lg .h-full  border border-gray-300 shadow-md hover:shadow-lg cursor-pointer transition-shadow duration-200"
+      className="flex flex-col justify-center   max-w-sm  rouded-lg h-full  border border-gray-300 shadow-md hover:shadow-lg cursor-pointer transition-shadow duration-200"
     >
       {/* Cover Image */}
       <div className="">

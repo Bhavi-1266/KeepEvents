@@ -242,34 +242,40 @@ class EventViewSet(viewsets.ModelViewSet):
     # -------------------------
 
     def invalidate_events_cache_all_users(self):
-        cache.delete_pattern("v1:user:*:/api/events/*")
+        cache.delete_pattern("user:*:/api/events/*")
 
     def invalidate_activity_summary(self, user_id):
-        cache.delete(f"v1:user:{user_id}:/api/users/me/activity-summary/")
+        cache.delete(f"user:*:/api/users/me/activity-summary/")
 
     # -------------------------
     # QUERYSET
     # -------------------------
 
     def get_queryset(self):
-
-
-
         user = self.request.user
         
         # 1. Get IDs of events where the user has explicit Guardian permissions
-        allowed_by_perm = get_objects_for_user(
+        # allowed_by_perm = get_objects_for_user(
+        #     user=user,
+        #     perms="view_event_obj",
+        #     klass=Events,
+        #     with_superuser=True,
+        # ).values_list('eventid', flat=True)
+
+        # # 2. Return events that are either Public OR in the allowed permission list
+        # return Events.objects.filter(
+        #     Q(visibility="public") | Q(eventid__in=allowed_by_perm)
+        # ).distinct()
+
+        publicEvents = Events.objects.filter(visibility="public")
+        permsEvents = get_objects_for_user(
             user=user,
             perms="events.view_event_obj",
             klass=Events,
             with_superuser=True,
-        ).values_list('eventid', flat=True)
-
-        # 2. Return events that are either Public OR in the allowed permission list
-        return Events.objects.filter(
-            Q(visibility="public") | Q(eventid__in=allowed_by_perm)
-        ).distinct()
-
+        )
+        AllowedEvents = (publicEvents | permsEvents).distinct()
+        return AllowedEvents
     # -------------------------
     # CACHED READS
     # -------------------------
@@ -292,7 +298,16 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         cache.set(cache_key, serializer.data, timeout=300)
         return Response(serializer.data)
-
+    
+    def update(self, request, *args, **kwargs):
+        event = self.get_object()
+        serializer = self.get_serializer(event, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            self.invalidate_events_cache_all_users()
+            return Response(serializer.data)
+        self.invalidate_events_cache_all_users()
+        return Response(serializer.errors, status=400)
     # -------------------------
     # PERMISSION VIEWS (CACHED)
     # -------------------------
@@ -459,8 +474,8 @@ class PhotoViewSet(viewsets.ModelViewSet):
     ]
     filterset_class = PhotoFilter
 
-    ordering_fields = ["uploadDate", "photoid"]
-    ordering = ["-uploadDate"]
+    ordering_fields = ["uploadDate", "photoid", "likecount", "viewcount", "downloadcount", "commentcount" , "FaceCount"]
+    ordering = ["-uploadDate", "-photoid", "-likecount", "-viewcount", "-downloadcount", "-commentcount" , "FaceCount"]  # default: newest first
 
     pagination_class = LimitOffsetPagination
     page_size = 10
@@ -475,9 +490,10 @@ class PhotoViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
+        # Convert to proper boolean
+        FindMe = self.request.query_params.get('FindMe', 'false').lower() == 'true'
 
         # 1. Get IDs of events where the user has explicit Guardian permissions
-        # (Covers: Private events they were invited to, and events they created/edit)
         permitted_event_ids = get_objects_for_user(
             user=user,
             perms="events.view_event_obj",
@@ -485,15 +501,18 @@ class PhotoViewSet(viewsets.ModelViewSet):
             with_superuser=True,
         ).values_list('eventid', flat=True)
 
-        # 2. Filter Photos based on the Event's status
-        # Return photos if:
-        # - The parent event is 'public'
-        # - OR the parent event ID is in the user's permitted list
-        return Photo.objects.filter(
+        # 2. Base queryset with event visibility filters
+        queryset = Photo.objects.filter(
             Q(event__visibility="public") | Q(event__eventid__in=permitted_event_ids)
-        ).select_related("event", "uploadedBy").distinct()
-
-
+        ).select_related("event", "uploadedBy")
+        
+        # 3. Apply FindMe filter if requested
+        if FindMe:
+            queryset = queryset.filter(
+                Faces__contains=[{"userid": user.userid, "username": user.username}]
+            ).exclude(Faces__isnull=True)  # Exclude null Faces
+        
+        return queryset.distinct()
 
     # In PhotoViewSet
     def invalidate_all_users_cache(self):
@@ -832,6 +851,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     ordering = ['-commentedAt']
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
+
+    def invalidate_all_users_cache(self):
+        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
+        # The '*' is the wildcard for the user_id part
+        cache.delete_pattern("user:*:/api/photos/*")
+        
+        # Also clear the activity summary for the person who liked it
+        user_id = self.request.user.userid
+        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
+
     def perform_create(self, serializer):
         photo_id = self.request.data.get('photo_id')
         if not photo_id:  # Only raise if photo is actually missing
@@ -839,6 +868,11 @@ class CommentViewSet(viewsets.ModelViewSet):
         
         # Continue with save
         serializer.save(user=self.request.user)
+
+        # Increment comment count
+        photo = Photo.objects.get(pk=photo_id)
+        # Invalidate caches
+        self.invalidate_all_users_cache()
 
 
 
@@ -857,6 +891,8 @@ class DownloadedPhotoViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
+
+
 # -------- View viewset --------
 class ViewedPhotoViewSet(viewsets.ModelViewSet):
     queryset = viewedPhoto.objects.all().select_related('user', 'photo')
@@ -870,3 +906,36 @@ class ViewedPhotoViewSet(viewsets.ModelViewSet):
     ordering = ['-viewedAt']
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
+
+    def invalidate_all_users_cache(self):
+        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
+        # The '*' is the wildcard for the user_id part
+        cache.delete_pattern("user:*:/api/photos/*")
+        
+        # Also clear the activity summary for the person who liked it
+        user_id = self.request.user.userid
+        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
+
+        
+    def perform_create(self, serializer):
+        photo_id = self.request.data.get('photo')
+        
+        if not photo_id:
+            raise ValidationError({"photo_id": "This field is required."})
+        
+        try:
+            photo = Photo.objects.get(pk=photo_id)
+        except Photo.DoesNotExist:
+            raise ValidationError({"photo_id": "Photo not found."})
+        
+        # Check permissions if needed
+        # if not can_user_comment_on_photo(self.request.user, photo):
+        #     raise PermissionDenied("You don't have permission to comment on this photo.")
+        
+        serializer.save(user=self.request.user, photo=photo)
+
+        # Increment view count
+        photo.viewcount += 1
+        photo.save(update_fields=['viewcount'])
+        # Invalidate caches
+        self.invalidate_all_users_cache()

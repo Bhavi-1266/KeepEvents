@@ -137,6 +137,7 @@ export async function getSearchedFilteredSortedPhotos(
   if (params.event) {
     query.append("event", String(params.event));
   }
+  
 
   const res = await fetch(`/api/photos/?limit=20&${query.toString()}`, {
     credentials: "include",
@@ -357,4 +358,29 @@ export async function deleteComment(commentid: number) {
     throw new Error("Failed to delete comment");
   }
 }
+
+export async function getViews(photoId: number) {
+  const response = await fetch(`/api/views/?photo=${photoId}`, {
+    method: "GET",
+    credentials: "include",
+  });
+}
   
+export async function addView(photoId: number) {
+  const response = await fetch(
+    `/api/views/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // important for auth
+      body: JSON.stringify({ photo: photoId }),
+    }
+  );
+  if (!response.ok) {
+    throw new Error("Failed to add view");
+  }
+
+  return response.json();
+}

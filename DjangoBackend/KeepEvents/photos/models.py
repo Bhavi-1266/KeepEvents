@@ -179,7 +179,6 @@ class viewedPhoto(models.Model):
 
     class Meta:
         ordering = ['-viewedAt']
-        unique_together = ('photo', 'user')
 
     def __str__(self):
         return f"ViewedPhoto: User {self.user.userid} viewed Photo {self.photo.photoid} at {self.viewedAt}" 

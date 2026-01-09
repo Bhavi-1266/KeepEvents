@@ -184,6 +184,9 @@ class PhotoSerializer(serializers.ModelSerializer):
     likes = serializers.IntegerField(source="likecount", read_only=True)
     isLikedByCurrentUser = serializers.SerializerMethodField()
 
+    comments = serializers.IntegerField(source="commentcount", read_only=True)
+
+
     # 👇 FACE RELATED
     Faces = serializers.JSONField(read_only=True)
     FaceCount = serializers.IntegerField(read_only=True)
@@ -215,6 +218,9 @@ class PhotoSerializer(serializers.ModelSerializer):
             "viewcount",
             "downloadcount",
             "commentcount",
+
+            # comments
+            "comments",
 
             # face tagging
             "Faces",
@@ -298,7 +304,8 @@ class viewedPhotoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = viewedPhoto
-        fields = '__all__'
+        fields = ['user', 'photo', 'viewedAt']
+        read_only_fields = ['user'  , 'viewedAt' , 'photo']
 
 
 

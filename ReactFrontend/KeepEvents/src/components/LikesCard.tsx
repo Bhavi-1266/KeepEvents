@@ -81,7 +81,7 @@ function LikesCard({
           handleLike();
         }}
         disabled={loading}
-        className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-white/95 hover:bg-white/100 
+        className="absolute top-3 right-3 z-5 flex items-center gap-1.5 bg-white/95 hover:bg-white/100 
                    backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg hover:shadow-xl 
                    border border-gray-200 hover:border-gray-300 transition-all duration-300
                    disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.05]

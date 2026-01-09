@@ -10,69 +10,78 @@ function NavBar() {
       : "text-white hover:text-blue-200 transition";
 
   return (
-    <header className="w-full">
-      {/* Top Branding Bar */}
-      <div className="bg-blue-900 text-white text-sm px-6 py-1">
-        Keep Events
+  <header className="w-full sticky top-0 z-[12] border-b border-[#dda15e]/20">
+    {/* Top Branding Bar */}
+    <div className="bg-[#283618] text-[#fefae0] text-[10px] font-black uppercase tracking-[0.4em] px-25 py-2.5">
+      Archive Management System
+    </div>
+
+    {/* Main Navbar - Increased height to h-20 */}
+    <nav className="flex items-center justify-between h-15 bg-white px-25 shadow-sm relative text-xl">
+      
+      {/* Left: Branding */}
+      <div
+        className="text-[#283618] font-black text-2xl tracking-tighter cursor-pointer uppercase z-10"
+        onClick={() => navigate("/HomePage")}
+      >
+        Keep<span className="text-[#bc6c25]">Events</span>
       </div>
 
-      {/* Main Navbar */}
-      <nav className="flex items-center justify-between h-16 bg-blue-600 px-6 shadow-md">
-        {/* Left: Website Name */}
-        <div
-          className="text-white font-semibold text-lg cursor-pointer"
-          onClick={() => navigate("/HomePage")}
+      {/* Center: Navigation Links - Now perfectly centered with full-height highlight */}
+      <ul className="absolute left-1/2 -translate-x-1/2 flex items-center h-full  space-x-6 z-0">
+        {[
+          { to: "/HomePage", label: "Home" },
+          { to: "/Events", label: "Events" },
+          { to: "/Photos", label: "Photos" },
+          { to: "/Activity", label: "Activity" }, // Swapped to center
+        ].map((link) => (
+          <li key={link.to} className="h-full">
+            <NavLink
+              to={link.to}
+              className={({ isActive }) =>
+                `px-6 h-full flex items-center text-[14px] font-black uppercase tracking-widest transition-all relative ${
+                  isActive
+                    ? "text-[#bc6c25] bg-[#fefae0]/60 "
+                    : "text-[#606c38] hover:text-[#283618] hover:bg-gray-50 "
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {link.label}
+                  {/* Bottom bar indicator for extra sharpness */}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#bc6c25]" />
+                  )}
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+
+      {/* Right: Actions & Identity */}
+      <div className="flex items-center space-x-6 z-10">
+        <NavLink
+          to="/Profile"
+          className={({ isActive }) =>
+            `flex flex-col items-end transition-all ${
+              isActive ? "text-[#bc6c25]" : "text-[#606c38] hover:text-[#283618]"
+            }`
+          }
         >
-          KeepEvents
-        </div>
+          <span className="text-sm font-black uppercase tracking-tight -mt-1">
+            My Profile
+          </span>
+        </NavLink>
 
-        {/* Center: Navigation Links */}
-        <ul className="flex space-x-6 font-medium">
-          <li>
-            <NavLink to="/HomePage" className={navLinkClass}>
-              Home
-            </NavLink>
-          </li>
+        <div className="h-8 w-[1px] bg-gray-200"></div>
 
-          <li>
-            <NavLink to="/Events" className={navLinkClass}>
-              Events
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="/Photos" className={navLinkClass}>
-              Photos
-            </NavLink>
-          </li>
-
-          <li>
-            <NavLink to="/Profile" className={navLinkClass}>
-              My Info
-            </NavLink>
-          </li>
-        </ul>
-
-        {/* Right: Actions */}
-        <div className="flex items-center space-x-3">
-          <NavLink
-            to="/Activity"
-            className={({ isActive }) =>
-              isActive
-                ? "bg-yellow-400 text-blue-900 px-4 py-1.5 rounded font-medium"
-                : "bg-blue-500 hover:bg-blue-400 text-white px-4 py-1.5 rounded transition"
-            }
-          >
-            My Activity
-          </NavLink>
-
-          <LogoutButton onLoggedOut={() => navigate("/login")} />
-
-          
-        </div>
-      </nav>
-    </header>
-  );
+        <LogoutButton onLoggedOut={() => navigate("/login")} />
+      </div>
+    </nav>
+  </header>
+);
 }
 
 export default NavBar;
