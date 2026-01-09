@@ -21,6 +21,7 @@
     const [deleteCommentId, setDeleteCommentId] = useState<number | null>(null);
     const [deletingComment, setDeletingComment] = useState(false);
 
+    
     const [likes, setLikes] = useState<Like[]>([]);
     const [nextLikesUrl, setNextLikesUrl] = useState<string | null>(null);
     const [loadingLikes, setLoadingLikes] = useState(false);
@@ -28,6 +29,7 @@
     const [comments, setComments] = useState<Comment[]>([]);
     const [nextCommentsUrl, setNextCommentsUrl] = useState<string | null>(null);
     const [loadingComments, setLoadingComments] = useState(false);
+
 
     const [newComment, setNewComment] = useState("");
     const [addingComment, setAddingComment] = useState(false);
@@ -45,14 +47,7 @@
         }
       } 
 
-      const fetchViews = async () => {
-        try {
-          const views = await getViews(photo.photoid);
-          console.log(views);
-        } catch (err) {
-          console.error("Error fetching views:", err);
-        }
-      }
+      
 
       sendView();
     }, [photo.photoid]);
@@ -270,12 +265,14 @@
           }
           
         </div>
-        <button
-          className="bg-red-600 text-white rounded px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 transition flex-shrink-0 ml-4"
-          onClick={() => setConfirmDelete(true)}
-        >
-          Delete
-        </button>
+        {photo.uploadedBy?.userid === currentUser?.userid && (
+          <button
+            className="bg-red-600 text-white rounded px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 transition flex-shrink-0 ml-4"
+            onClick={() => setConfirmDelete(true)}
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {/* Main content grid */}

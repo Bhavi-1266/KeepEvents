@@ -363,6 +363,7 @@ function PhotosGallery() {
               >
                 <option value="-uploadDate">Newest First</option>
                 <option value="uploadDate">Oldest First</option>
+                <option value="-viewcount">Most Viewed</option>
                 <option value="-likecount">Most Liked</option>
                 <option value="-commentcount">Most Commented</option>
                 <option value="-FaceCount">Most People</option>

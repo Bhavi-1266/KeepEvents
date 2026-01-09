@@ -118,7 +118,9 @@ function PhotoCard({ photo, selected,selectionMode, onToggleSelect, onClick }: P
         <span className="text-[10px] font-black text-black uppercase tracking-widest translate-y-[1px]">
           {likes}
         </span>
+        
       </button>
+      <div  className="text-[10px] font-black text-black uppercase tracking-widest align-self-end"> {photo.viewcount}</div >
     </div>
   </div>
 );

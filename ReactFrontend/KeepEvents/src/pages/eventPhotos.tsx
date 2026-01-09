@@ -65,6 +65,10 @@ function EventPhotos() {
   const [FindMe , setFindMe] = useState(false);
   const [Sort , setSort] = useState("");
 
+  const reloadPhotos = useCallback(async () => {
+    window.location.reload();
+  }, [eventId]);
+
 
   // ✅ Load initial data
   useEffect(() => {
@@ -111,6 +115,7 @@ function EventPhotos() {
 
     init();
   }, [eventId, navigate]);
+
 
 
   // ✅ Connect to WebSocket ONCE when user is available
@@ -300,21 +305,21 @@ function EventPhotos() {
     setHasEventChanges(false);
   };
 
-  const ReloadPhotos = async () => {
-    if (!eventId) return;
-    try {
-      const data = await LoadEventPhotos(Number(eventId), 0);
-      setPhotos(data.results || []);
-      setNextUrl(data.next || null);
-    } catch (err: any) {
-      console.error("Load failed:", err);
-      if (err.message?.includes("401") || err.message?.includes("403")) {
-        navigate("/", { replace: true });
-      } else {
-        setError(err.message || "Failed to load event");
-      }
-    }
-  }
+  // const ReloadPhotos = async () => {
+  //   if (!eventId) return;
+  //   try {
+  //     const data = await LoadEventPhotos(Number(eventId), 0);
+  //     setPhotos(data.results || []);
+  //     setNextUrl(data.next || null);
+  //   } catch (err: any) {
+  //     console.error("Load failed:", err);
+  //     if (err.message?.includes("401") || err.message?.includes("403")) {
+  //       navigate("/", { replace: true });
+  //     } else {
+  //       setError(err.message || "Failed to load event");
+  //     }
+  //   }
+  // }
   const saveEventChanges = async () => {
     if (!event || !eventId) return;
     try {
@@ -705,6 +710,7 @@ function EventPhotos() {
                 <option value="-uploadDate">Newest First</option>
                 <option value="photoid">Oldest First</option>
                 <option value="-likecount">Most Liked</option>
+                <option value="-viewcount">Most Viewed</option>
                 <option value="-commentcount">Most Commented</option>
                 <option value="-FaceCount">Most People</option>
               </select>
@@ -757,7 +763,11 @@ function EventPhotos() {
       )}
 
       {showAddPhotos && eventId && (
-        <AddPhotosModal eventId={Number(eventId)} onClose={() => setShowAddPhotos(false)} sucessCallback={() => ReloadPhotos()} failureCallback={() => toast.error("Failed to add photos") } />
+        <AddPhotosModal eventId={Number(eventId)} onClose={() => setShowAddPhotos(false)} sucessCallback={() => {
+          toast.success("Photos added successfully") 
+          reloadPhotos();
+        }
+        } failureCallback={() => toast.error("Failed to add photos") } />
       )}
 
       {confirmDelete && (

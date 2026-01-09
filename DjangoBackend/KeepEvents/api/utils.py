@@ -173,3 +173,71 @@ def build_user_cache_key(request):
     full_key = f"user:{user_id}:{path}?{normalized_query}"
 
     return full_key
+
+
+from django_redis import get_redis_connection
+from django.core.cache import cache
+
+
+def invalidate_all_users_cache():
+    """
+    Delete all photo cache keys for all users.
+    Pattern: :1:user:*:/api/photos/*
+    """
+    try:
+        redis_conn = get_redis_connection("default")
+        pattern = "*user:*:/api/photos/*"
+        
+        cursor = 0
+        deleted_count = 0
+        
+        while True:
+            cursor, keys = redis_conn.scan(cursor, match=pattern, count=100)
+            if keys:
+                redis_conn.delete(*keys)
+                deleted_count += len(keys)
+            if cursor == 0:
+                break
+        
+        print(f"✅ Cleared {deleted_count} photo cache keys")
+        
+    except Exception as e:
+        print(f"⚠️ Cache invalidation error: {e}")
+
+
+def invalidate_events_cache_all_users():
+    """
+    Delete all event cache keys for all users.
+    Pattern: :1:user:*:/api/events/*
+    """
+    try:
+        redis_conn = get_redis_connection("default")
+        pattern = "*user:*:/api/events/*"
+        
+        cursor = 0
+        deleted_count = 0
+        
+        while True:
+            cursor, keys = redis_conn.scan(cursor, match=pattern, count=100)
+            if keys:
+                redis_conn.delete(*keys)
+                deleted_count += len(keys)
+            if cursor == 0:
+                break
+        
+        print(f"✅ Cleared {deleted_count} event cache keys")
+        
+    except Exception as e:
+        print(f"⚠️ Events cache invalidation error: {e}")
+
+
+def invalidate_activity_summary(user_id):
+    """
+    Delete activity summary cache for a specific user.
+    """
+    try:
+        cache_key = f"*user:{user_id}:/api/users/me/activity-summary/"
+        result = cache.delete(cache_key)
+        print(f"✅ Cleared activity summary for user {user_id} (deleted: {result})")
+    except Exception as e:
+        print(f"⚠️ Failed to clear activity summary: {e}")

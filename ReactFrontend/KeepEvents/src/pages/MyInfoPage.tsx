@@ -264,29 +264,28 @@ function MyInfoPage() {
 
   // ==================== RENDER UI ====================
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#fefae0]/30 font-sans text-[#283618]">
       <NavBar />
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-6 space-y-8 pt-12">
         
         {/* ==================== PROFILE HEADER SECTION ==================== */}
-        <div className="bg-white shadow rounded p-6 flex items-center space-x-8">
+        <div className="bg-white rounded-xl shadow-xl shadow-[#283618]/5 border border-[#dda15e]/20 p-8 flex flex-col sm:flex-row items-center space-y-6 sm:space-y-0 sm:space-x-10">
           
           {/* PROFILE IMAGE */}
-          <div className="relative">
-            <img
-              src={
-                // If user selected a new image, show preview using blob URL
-                profileImageFile
-                  ? URL.createObjectURL(profileImageFile)
-                  // Otherwise show current profile image or default
-                  : user.userProfile || "../../src/assets/ProfileFace.png"
-              }
-              alt="Profile"
-              className="w-36 h-36 rounded-full object-cover border"
-            />
+          <div className="relative group">
+            <div className="w-40 h-40 rounded-full border-4 border-[#fefae0] shadow-lg overflow-hidden ring-1 ring-[#606c38]/20">
+              <img
+                src={
+                  profileImageFile
+                    ? URL.createObjectURL(profileImageFile)
+                    : user.userProfile || "../../src/assets/ProfileFace.png"
+                }
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            </div>
 
-            {/* Hidden file input - triggered by button click */}
             <input
               ref={fileInputRef}
               type="file"
@@ -299,107 +298,114 @@ function MyInfoPage() {
               }}
             />
 
-            {/* EDIT/REVERT BUTTON FOR PROFILE IMAGE */}
+            {/* EDIT/REVERT BUTTON */}
             <button
               onClick={
-                // If user selected a new image, show eraser to revert
                 profileImageFile
                   ? revertProfileImage
-                  // Otherwise show pencil to upload new image
                   : () => fileInputRef.current?.click()
               }
-              className={`absolute bottom-1 border border-gray-300 right-1 p-2 rounded ${
-                profileImageFile ? "bg-red-100 text-red-600" : "bg-white"
+              className={`absolute bottom-2 right-2 p-2.5 rounded-lg border-2 shadow-md transition-all active:scale-95 ${
+                profileImageFile 
+                  ? "bg-red-500 border-red-600 text-white hover:bg-red-700" 
+                  : "bg-[#bc6c25] border-[#bc6c25] text-white hover:bg-[#283618]"
               }`}
             >
-              {profileImageFile ? <Eraser size={12} /> : <Pencil size={12} />}
+              {profileImageFile ? <Eraser size={16} /> : <Pencil size={16} />}
             </button>
           </div>
 
           {/* USER INFO */}
-          <div className="space-y-2 w-full">
-            {/* USERNAME - Now editable */}
-            <div className="relative">
+          <div className="space-y-4 w-full text-center sm:text-left">
+            <div className="relative inline-block w-full">
+               <span className="text-[#bc6c25] font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Identity</span>
               {editingUsername ? (
                 <input
                   value={tempUsername}
                   onChange={(e) => updateUsername(e.target.value)}
-                  className="text-2xl font-semibold border p-2 rounded w-full"
+                  className="text-2xl font-black border-2 border-[#bc6c25] p-2 rounded-lg w-full bg-[#fefae0]/50 outline-none uppercase tracking-tighter"
                   placeholder="Username"
                 />
               ) : (
-                <h1 className="text-2xl font-semibold">{tempUsername}</h1>
+                <h1 className="text-4xl font-black text-[#283618] tracking-tighter uppercase">{tempUsername}</h1>
               )}
               
-              {/* EDIT/REVERT BUTTON FOR USERNAME */}
               <button
                 onClick={editingUsername ? revertUsername : startEditingUsername}
-                className={`absolute -top-1 -right-1 p-2 rounded border border-gray-300 ${
-                  editingUsername ? "bg-red-100 text-red-600" : "bg-white"
+                className={`absolute top-0 right-0 p-2 rounded-lg border-2 transition-all ${
+                  editingUsername 
+                    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100" 
+                    : "bg-white border-[#606c38]/10 text-[#606c38] hover:border-[#bc6c25]"
                 }`}
               >
                 {editingUsername ? <Eraser size={14} /> : <Pencil size={14} />}
               </button>
             </div>
             
-            {/* EMAIL - Non-editable */}
-            <p className="text-gray-500">{user.email}</p>
+            <p className="text-[#606c38] font-bold text-xs uppercase tracking-[0.2em] bg-[#606c38]/5 inline-block px-3 py-1 rounded-full">
+              {user.email}
+            </p>
           </div>
         </div>
 
-        {/* ==================== BIO SECTION (multiline) ==================== */}
-        <EditableInput
-          label="About"
-          field="userbio"
-          value={editData.userbio}
-          editingField={editingField}
-          onEdit={setEditingField}
-          onChange={updateField}
-          onRevert={revertField}
-          multiline // Shows textarea instead of input
-        />
+        {/* ==================== BIO SECTION ==================== */}
+        <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1 shadow-sm">
+            <EditableInput
+              label="Biography"
+              field="userbio"
+              value={editData.userbio}
+              editingField={editingField}
+              onEdit={setEditingField}
+              onChange={updateField}
+              onRevert={revertField}
+              multiline 
+            />
+        </div>
 
-        {/* ==================== OTHER FIELDS (grid layout) ==================== */}
-        <div className="grid grid-cols-2 gap-6">
-          <EditableInput
-            label="Enrollment No"
-            field="enrollmentNo"
-            value={editData.enrollmentNo}
-            {...editableProps} // Spread all the common props
-          />
-          <EditableInput
-            label="Department"
-            field="dept"
-            value={editData.dept}
-            {...editableProps}
-          />
-          <EditableInput
-            label="Batch"
-            field="batch"
-            value={editData.batch}
-            {...editableProps}
-          />
+        {/* ==================== OTHER FIELDS ==================== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1">
+            <EditableInput
+                label="Enrollment No"
+                field="enrollmentNo"
+                value={editData.enrollmentNo}
+                {...editableProps}
+            />
+          </div>
+          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1">
+            <EditableInput
+                label="Department"
+                field="dept"
+                value={editData.dept}
+                {...editableProps}
+            />
+          </div>
+          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1 md:col-span-2">
+            <EditableInput
+                label="Academic Batch"
+                field="batch"
+                value={editData.batch}
+                {...editableProps}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ==================== SAVE/DISCARD BUTTONS (fixed bottom-right) ==================== */}
-      {/* Only show if there are unsaved changes */}
+      {/* ==================== SAVE/DISCARD BUTTONS ==================== */}
       {hasChanges && (
-        <div className="fixed bottom-6 right-6 flex gap-3">
-          {/* DISCARD BUTTON - reverts all changes */}
+        <div className="fixed bottom-8 right-8 flex flex-col sm:flex-row gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <button
             onClick={discardChanges}
-            className="bg-gray-200 px-4 py-2 rounded flex items-center gap-2"
+            className="bg-white border-2 border-[#606c38]/20 px-6 py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#606c38] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all shadow-lg"
           >
-            <X size={16} /> Discard
+            <X size={16} /> Discard Changes
           </button>
           
-          {/* SAVE BUTTON - saves all changes to server */}
           <button
             onClick={saveChanges}
-            className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2"
+            className="bg-[#283618] border-2 border-[#283618] px-10 py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#fefae0] hover:bg-[#bc6c25] hover:border-[#bc6c25] transition-all shadow-lg shadow-[#283618]/20"
           >
-            <Save size={16} /> Save
+            <Save size={16} /> Synchronize Profile
           </button>
         </div>
       )}

@@ -13,7 +13,11 @@ from .serializers import RegisterSerializer , downloadedPhotoSerializer, viewedP
 from .utils import build_user_cache_key
 from django.core.cache import cache
 
+# At the top of the file, add:
+from django.db import models
+
 from realtime.utils import send_to_event 
+from .utils import invalidate_all_users_cache, invalidate_events_cache_all_users, invalidate_activity_summary
 
 import hashlib
 
@@ -241,11 +245,7 @@ class EventViewSet(viewsets.ModelViewSet):
     # CACHE INVALIDATION HELPERS
     # -------------------------
 
-    def invalidate_events_cache_all_users(self):
-        cache.delete_pattern("user:*:/api/events/*")
-
-    def invalidate_activity_summary(self, user_id):
-        cache.delete(f"user:*:/api/users/me/activity-summary/")
+   
 
     # -------------------------
     # QUERYSET
@@ -304,9 +304,9 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(event, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            self.invalidate_events_cache_all_users()
+            invalidate_events_cache_all_users()
             return Response(serializer.data)
-        self.invalidate_events_cache_all_users()
+        invalidate_events_cache_all_users()
         return Response(serializer.errors, status=400)
     # -------------------------
     # PERMISSION VIEWS (CACHED)
@@ -350,8 +350,8 @@ class EventViewSet(viewsets.ModelViewSet):
         user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
         remove_perm("view_event_obj", user, event)
 
-        self.invalidate_events_cache_all_users()
-        self.invalidate_activity_summary(user.userid)
+        invalidate_events_cache_all_users()
+        invalidate_activity_summary(user.userid)
 
         return Response({"message": "Viewer removed"})
 
@@ -361,8 +361,8 @@ class EventViewSet(viewsets.ModelViewSet):
         user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
         remove_perm("change_event_obj", user, event)
 
-        self.invalidate_events_cache_all_users()
-        self.invalidate_activity_summary(user.userid)
+        invalidate_events_cache_all_users()
+        invalidate_activity_summary(user.userid)
 
         return Response({"message": "Editor removed"})
 
@@ -376,7 +376,7 @@ class EventViewSet(viewsets.ModelViewSet):
             expires_at=request.data.get("expires_at"),
         )
 
-        self.invalidate_events_cache_all_users()
+        invalidate_events_cache_all_users()
 
         return Response({
             "invite_url": f"{FRONTEND_URL}/invite/{invite.token}",
@@ -391,8 +391,8 @@ class EventViewSet(viewsets.ModelViewSet):
         event = serializer.save(eventCreator=self.request.user)
         CreateEventPerms(event, serializer.validated_data.get("visibility", "private"), self.request.user)
 
-        self.invalidate_events_cache_all_users()
-        self.invalidate_activity_summary(self.request.user.userid)
+        invalidate_events_cache_all_users()
+        invalidate_activity_summary(self.request.user.userid)
 
     def perform_update(self, serializer):
         event = serializer.save()
@@ -401,8 +401,8 @@ class EventViewSet(viewsets.ModelViewSet):
         if visibility:
             set_event_perms(event, visibility, self.request.data.get("extra_users", []))
 
-        self.invalidate_events_cache_all_users()
-        self.invalidate_activity_summary(self.request.user.userid)
+        invalidate_events_cache_all_users()
+        invalidate_activity_summary(self.request.user.userid)
 
 
 from rest_framework.views import APIView
@@ -515,14 +515,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     # In PhotoViewSet
-    def invalidate_all_users_cache(self):
-        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
-        # The '*' is the wildcard for the user_id part
-        cache.delete_pattern("user:*:/api/photos/*")
-        
-        # Also clear the activity summary for the person who liked it
-        user_id = self.request.user.userid
-        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
+    
 
 
 
@@ -579,7 +572,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
     # Single create
     def perform_create(self, serializer):
         permission_classes = [IsAuthenticated , canAddPhoto]
-        self.invalidate_all_users_cache()
+        invalidate_all_users_cache()
         serializer.save(uploadedBy=self.request.user)
         
 
@@ -634,7 +627,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
                 errors.append({"index": i, "errors": serializer.errors})
 
         # invalidate cache ONCE
-        self.invalidate_all_users_cache()
+        invalidate_all_users_cache()
 
         # 🔔 notify ALL viewers of affected events
         for eventid in affected_event_ids:
@@ -688,7 +681,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
                 skipped.append(photo.pk)
 
         # invalidate cache ONCE
-        self.invalidate_all_users_cache()
+        invalidate_all_users_cache()
 
         # 🔔 notify all viewers of affected events
         for eventid in affected_event_ids:
@@ -729,7 +722,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
         
         # CRITICAL: Clear cache for everyone because the 'likecount' changed for everyone
         # and 'isLiked' changed for this specific user.
-        self.invalidate_all_users_cache()
+        invalidate_all_users_cache()
         if (liked):
             send_to_user(
                 user_id=photo.uploadedBy.userid,
@@ -852,14 +845,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
-    def invalidate_all_users_cache(self):
-        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
-        # The '*' is the wildcard for the user_id part
-        cache.delete_pattern("user:*:/api/photos/*")
-        
-        # Also clear the activity summary for the person who liked it
-        user_id = self.request.user.userid
-        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
+  
 
     def perform_create(self, serializer):
         photo_id = self.request.data.get('photo_id')
@@ -872,7 +858,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         # Increment comment count
         photo = Photo.objects.get(pk=photo_id)
         # Invalidate caches
-        self.invalidate_all_users_cache()
+        invalidate_all_users_cache()
 
 
 
@@ -907,16 +893,8 @@ class ViewedPhotoViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]  # keep or change as needed
 
-    def invalidate_all_users_cache(self):
-        # This pattern matches "user:123:/api/photos/..." and "user:456:/api/photos/..."
-        # The '*' is the wildcard for the user_id part
-        cache.delete_pattern("user:*:/api/photos/*")
-        
-        # Also clear the activity summary for the person who liked it
-        user_id = self.request.user.userid
-        cache.delete(f"user:{user_id}:/api/users/me/activity-summary/")
+    
 
-        
     def perform_create(self, serializer):
         photo_id = self.request.data.get('photo')
         
@@ -931,11 +909,14 @@ class ViewedPhotoViewSet(viewsets.ModelViewSet):
         # Check permissions if needed
         # if not can_user_comment_on_photo(self.request.user, photo):
         #     raise PermissionDenied("You don't have permission to comment on this photo.")
-        
+        invalidate_all_users_cache()
         serializer.save(user=self.request.user, photo=photo)
 
         # Increment view count
         photo.viewcount += 1
         photo.save(update_fields=['viewcount'])
         # Invalidate caches
-        self.invalidate_all_users_cache()
+        
+
+
+

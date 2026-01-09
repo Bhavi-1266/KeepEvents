@@ -174,17 +174,58 @@ export async function togglePhotoLike(photoId: number) {
 }
 
 
-export async function GetMyClicks(userId: number) {
-  const response = await fetch(`/api/photos/?user=${userId}&limit=20`, {
+export async function GetMyClicks(
+  userId: number,
+  options: {
+    offset?: number;
+    limit?: number;
+    ordering?: string;
+    filters?: {
+      search?: string;
+      date_after?: string;
+      date_before?: string;
+      FindMe?: string;
+    };
+  } = {}
+) {
+  const { offset = 0, limit = 20, ordering = "-uploadDate", filters = {} } = options;
+
+  const params = new URLSearchParams({
+    user: userId.toString(),
+    limit: limit.toString(),
+    offset: offset.toString(),
+  });
+
+  if (ordering) {
+    params.append("ordering", ordering);
+  }
+
+  if (filters.search) {
+    params.append("search", filters.search);
+  }
+
+  if (filters.date_after) {
+    params.append("date_after", filters.date_after);
+  }
+
+  if (filters.date_before) {
+    params.append("date_before", filters.date_before);
+  }
+
+  if (filters.FindMe === "true") {
+    params.append("FindMe", "true");
+  }
+
+  const response = await fetch(`/api/photos/?${params.toString()}`, {
     method: "GET",
     credentials: "include",
   });
 
   if (!response.ok) {
-    throw new Error("Invalid Couldt get you clicks");
+    throw new Error("Couldn't get your clicks");
   }
-  return response.json();
 
+  return response.json();
 }
 export interface BulkDeleteResponse {
   deleted: number[];
