@@ -339,6 +339,10 @@
                   <span className="font-medium">{photo.viewcount ?? 0}</span>
                 </div>
                 <div>
+                  <span className="font-bold text-[10px] uppercase text-neutral-400 block">People</span>
+                  <span className="font-medium">{photo.FaceCount ?? 0}</span>
+                </div>
+                <div>
                   <span className="font-bold text-[10px] uppercase text-neutral-400 block">Downloads</span>
                   <span className="font-medium">{photo.downloadcount ?? 0}</span>
                 </div>

@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { getMyClicksStats } from "../services/user.ts";
 import type { UserActivitySummary } from "../types/user";
 import { GetMyClicks, getNextSetPhotos, DeletePhotos } from "../services/Photos";
-import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
+import { useWebSocket } from "../contexts/WebSocketContext.tsx";
 import NavBar from "../components/navBar";
 import SelectionBar from "../components/selectionBar.tsx";
 import HighlightPhoto from "../components/HighlightPhoto";
@@ -17,7 +17,7 @@ import { Search, Calendar } from "lucide-react";
 function MyActivityPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const navigate = useNavigate();
-
+    const { subscribe } = useWebSocket();
   const [myClicks, setMyClicks] = useState<Photo[]>([]);
   const [selectedClick, setSelectedClick] = useState<Photo | null>(null);
 
@@ -113,16 +113,7 @@ function MyActivityPage() {
   }, [nextUrl, fetchingMore]);
 
   /* ---------------- SOCKET CONNECTION ---------------- */
-  useEffect(() => {
-    if (!currentUser) return;
-
-    connectSocket(currentUser.userid);
-
-    return () => {
-      disconnectSocket();
-    };
-  }, [currentUser]);
-
+  
   useEffect(() => {
     if (!currentUser) return;
 

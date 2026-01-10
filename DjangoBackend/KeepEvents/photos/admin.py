@@ -28,14 +28,15 @@ class PhotoAdmin(admin.ModelAdmin):
 
     readonly_fields = ('image_preview', 'photoid', 'uploadDate')
 
-    ordering = ('-uploadDate', '-likecount', '-viewcount', '-downloadcount', '-commentcount')
+    ordering = ('-uploadDate', '-likecount', '-viewcount', '-downloadcount', '-commentcount' , 
+                'FaceCount', 'isProcessed' ,'Faces')
 
     fieldsets = (
         (None, {
             'fields': ('photoDesc', 'photoFile', 'image_preview', 'uploadDate', 'photoid')
         }),
         ('Relations', {
-            'fields': ('event', 'uploadedBy', 'likecount', 'viewcount', 'downloadcount', 'commentcount')
+            'fields': ('event', 'uploadedBy', 'likecount', 'viewcount', 'downloadcount', 'commentcount', 'Faces', 'FaceCount', 'isProcessed')
         }),
         ('Metadata', {
             'fields': ('extractedTags', 'photoMeta')

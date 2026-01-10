@@ -1,5 +1,4 @@
 import { GetAllEvents , getSearchedFilteredSortedEvents } from "../services/events";
-import { connectSocket, disconnectSocket } from "../services/socket";
 import { useEffect, useState } from "react";
 import type { Event } from "../types/event";
 import EventCard from "../components/EventCard";
@@ -10,12 +9,14 @@ import {getMe} from "../services/auth"
 import NavBar from "../components/navBar";
 import { subscribe } from "../services/socket";
 import { toast } from "react-hot-toast";
-
+import { useWebSocket } from "../contexts/WebSocketContext";
 
 function EventsPage() {
         const navigate = useNavigate();
         const [events, setEvents] = useState<Event[]>([]);
         const [error, setError] = useState<string | null>(null);
+        const { subscribe } = useWebSocket();
+
         const [currentUser, setCurrentUser] = useState<User | null>(null);
         const [loading, setLoading] = useState(true);
         const [locations, setLocations] = useState<Set<string>>(new Set<string>());
@@ -74,19 +75,7 @@ function EventsPage() {
   }, []);
 
 
-  useEffect(() => {
-      if (!currentUser) return;
-
-      connectSocket(currentUser.userid);
-
-      // Cleanup on unmount only
-      return () => {
-        disconnectSocket();
-      };
-    }, [currentUser]); // Only reconnect if userId changes
-
-    
-
+  
     // ✅ Subscribe to photo likes
     useEffect(() => {
       if (!currentUser) return;
@@ -104,7 +93,7 @@ function EventsPage() {
       return () => {
         unsubscribe();
       };
-    } , [currentUser?.userid]); // Only resubscribe if userId changes
+    } , [currentUser?.userid , subscribe]); // Only resubscribe if userId changes
 
 
  if (loading) {

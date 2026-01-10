@@ -16,7 +16,8 @@ import { toast } from "react-hot-toast";
 import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera } from "lucide-react";
 
 
-import { connectSocket , subscribe  , disconnectSocket} from "../services/socket.ts";
+import { useWebSocket } from "../contexts/WebSocketContext";
+
 
 
 function EventPhotos() {
@@ -31,6 +32,9 @@ function EventPhotos() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  //Websocket
+  const { subscribe } = useWebSocket();
+
   // Photos & pagination
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
@@ -66,7 +70,25 @@ function EventPhotos() {
   const [Sort , setSort] = useState("");
 
   const reloadPhotos = useCallback(async () => {
-    window.location.reload();
+    if (!eventId) {
+      setError("Invalid event ID");
+      return;
+    }
+    setLoadingPhotos(true);
+    try {
+      const data = await LoadEventPhotos(Number(eventId), 0);
+      setPhotos(data.results || []);
+      setNextUrl(data.next || null);
+    } catch (err: any) {
+      console.error("Load failed:", err);
+      if (err.message?.includes("401") || err.message?.includes("403")) {
+        navigate("/", { replace: true });
+      } else {
+        setError(err.message || "Failed to load event");
+      }
+    } finally {
+      setLoadingPhotos(false);
+    }
   }, [eventId]);
 
 
@@ -119,36 +141,36 @@ function EventPhotos() {
 
 
   // ✅ Connect to WebSocket ONCE when user is available
-    useEffect(() => {
-      if (!currentUser) return;
+    // useEffect(() => {
+    //   if (!currentUser) return;
 
-      connectSocket(currentUser.userid);
+    //   connectSocket(currentUser.userid);
 
-      // Cleanup on unmount only
-      return () => {
-        disconnectSocket();
-      };
-    }, [currentUser]); // Only reconnect if userId changes
+    //   // Cleanup on unmount only
+    //   return () => {
+    //     disconnectSocket();
+    //   };
+    // }, [currentUser]); // Only reconnect if userId changes
 
     // ✅ Subscribe to event photo changes
-    useEffect(() => {
-      if (!eventId) return;
+    // useEffect(() => {
+    //   if (!eventId) return;
 
-      const unsubscribe = subscribe("event_photos_changed", (data) => {
-        if (data.eventid !== Number(eventId)) return;
-        toast.success("Event updated");
+    //   const unsubscribe = subscribe("event_photos_changed", (data) => {
+    //     if (data.eventid !== Number(eventId)) return;
+    //     toast.success("Event updated");
         
-        // Reload photos
-        LoadEventPhotos(Number(eventId), 0).then((photosData) => {
-          setPhotos(photosData.results || []);
-          setNextUrl(photosData.next || null);
-        });
-      });
+    //     // Reload photos
+    //     LoadEventPhotos(Number(eventId), 0).then((photosData) => {
+    //       setPhotos(photosData.results || []);
+    //       setNextUrl(photosData.next || null);
+    //     });
+    //   });
 
-      return () => {
-        unsubscribe();
-      };
-    }, [eventId]);
+    //   return () => {
+    //     unsubscribe();
+    //   };
+    // }, [eventId , subscribe]); // Only resubscribe if eventId changes
 
     // ✅ Subscribe to photo likes
     useEffect(() => {
@@ -156,7 +178,7 @@ function EventPhotos() {
 
       const unsubscribe = subscribe("photo_liked", (data) => {
         if (data.userid !== currentUser.userid) return;
-        // if (data.likedBy == currentUser.username) return;
+        if (data.likedBy == currentUser.username) return;
         toast.success(`${data.likedBy  } liked your photo`);
         
         setPhotos(prev => 
@@ -165,15 +187,15 @@ function EventPhotos() {
               ? { ...p, likes: (p.likes || 0) + 1 } 
               : p
           )   
-        );
-
+        );  
+        
         
       });
 
       return () => {
         unsubscribe();
       };
-    } , [currentUser?.userid]); // Only resubscribe if userId changes
+    } , [currentUser?.userid , subscribe]); // Only resubscribe if userId changes
 
 
   // ✅ Load event people
@@ -245,7 +267,7 @@ function EventPhotos() {
         offset: 0,
         limit: 20,
         ordering: Sort,
-        filters: { event_id: eventId  , FindMe: FindMe ? "true" : "false" },
+        filters: { event: eventId  , FindMe: FindMe ? "true" : "false" },
       });
       setPhotos(data.results || []);
       setNextUrl(data.next || null);

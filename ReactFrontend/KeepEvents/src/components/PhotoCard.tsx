@@ -39,7 +39,7 @@ function PhotoCard({ photo, selected,selectionMode, onToggleSelect, onClick }: P
 
   return (
   <div
-    className={`group flex flex-col rounded-xl h-full border transition-all duration-300 relative overflow-hidden bg-white
+    className={`group flex flex-col rounded-xl h-full border transition-all duration-300 relative overflow-hidden bg-[#fefae0]/30
       ${
         selected
           ? "border-black ring-1 ring-black shadow-2xl" // Selected
@@ -75,7 +75,7 @@ function PhotoCard({ photo, selected,selectionMode, onToggleSelect, onClick }: P
     </div>
 
     {/* Image Area */}
-    <div className="relative flex-1 bg-neutral-50 flex items-center justify-center overflow-hidden border-b border-black/5">
+    <div className="relative flex-1 bg-neutral-100 flex items-center justify-center overflow-hidden border-b border-black/5">
       {photo.photoFile ? (
         <img
           src={photo.photoFile}
@@ -93,7 +93,7 @@ function PhotoCard({ photo, selected,selectionMode, onToggleSelect, onClick }: P
 
     {/* Footer */}
     <div
-      className="flex items-center justify-between px-4 py-3 bg-white relative z-10"
+      className="flex items-center justify-between px-4 py-3 bg-[#79afa4]/30 text-[#fefae0] relative z-10"
       onClick={(e) => e.stopPropagation()}
     >
       <button
@@ -109,7 +109,7 @@ function PhotoCard({ photo, selected,selectionMode, onToggleSelect, onClick }: P
             liked
               ? "fill-red-500 stroke-red-500 scale-110" // Liked: Red fill
               : "fill-transparent stroke-black/40 group-hover/btn:stroke-red-500" // Unliked: Gray outline, turns Red on hover
-          }`}
+          }`}bg-white
           strokeWidth={2}
         >
           <path d="M12 21s-6.7-4.35-9.33-7.28C.94 11.74 1.6 7.99 4.9 6.5c2.06-.93 4.29-.14 5.6 1.38C11.81 6.36 14.04 5.57 16.1 6.5c3.3 1.49 3.96 5.24 2.23 7.22C18.7 16.65 12 21 12 21z" />

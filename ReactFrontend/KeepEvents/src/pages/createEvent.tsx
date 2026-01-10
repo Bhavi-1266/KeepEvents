@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import toast  from "react-hot-toast";
 import {getMe}  from "../services/auth";
 import NavBar from "../components/navBar";
+
+import { useWebSocket } from "../contexts/WebSocketContext";
+
 type CreateEventForm = Pick<
   Event,
   | "eventname"
@@ -25,6 +28,8 @@ function CreateEvent() {
     eventlocation: "",
     visibility: "public",
   });
+
+  const { subscribe } = useWebSocket();
 
   const [error , setError] = useState<string | null>(null);
   // Logged-in user (event manager / creator)
@@ -48,6 +53,25 @@ function CreateEvent() {
 
     checkAuth();
   }, []);
+
+  
+    // ✅ Subscribe to photo likes
+    useEffect(() => {
+      if (!currentUser) return;
+
+      const unsubscribe = subscribe("photo_liked", (data) => {
+        if (data.userid !== currentUser.userid) return;
+        if (data.likedBy == currentUser.username) return;
+        toast.success(`${data.likedBy  } liked your photo`);
+        
+        
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } , [currentUser?.userid , subscribe]); // Only resubscribe if userId changes
+
 
  
 

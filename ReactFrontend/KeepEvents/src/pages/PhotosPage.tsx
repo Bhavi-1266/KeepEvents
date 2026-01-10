@@ -1,5 +1,5 @@
 import { getAllPhotos, getSearchedFilteredSortedPhotos, getNextSetPhotos, DeletePhotos } from "../services/Photos";
-import { connectSocket, disconnectSocket, subscribe } from "../services/socket";
+import { useWebSocket } from "../contexts/WebSocketContext";
 import { useEffect, useState, useRef } from "react";
 import type { Photo } from "../types/photos";
 import PhotoCard from "../components/PhotoCard";
@@ -20,7 +20,7 @@ function PhotosGallery() {
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const selectionMode = selectedIds.size > 0;
-
+  const { subscribe } = useWebSocket();
   const [searchQuery, setSearchQuery] = useState("");
   const [Sort, setSort] = useState("-uploadDate");
   const [FindMe, setFindMe] = useState(false);
@@ -84,16 +84,6 @@ function PhotosGallery() {
 
     return () => observer.disconnect();
   }, [nextUrl, fetchingMore]);
-
-  useEffect(() => {
-    if (!currentUser) return;
-
-    connectSocket(currentUser.userid);
-
-    return () => {
-      disconnectSocket();
-    };
-  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
