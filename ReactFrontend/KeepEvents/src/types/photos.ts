@@ -13,7 +13,7 @@ export interface Photo {
   uploadDate: string;
 
   extractedTags: string[] | null;
-  photoMeta: Record<string, any> | null;
+  photoMeta: string | null;
 
   // counts
   likes: number;

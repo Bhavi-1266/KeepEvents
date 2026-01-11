@@ -108,6 +108,8 @@ def get_user_role_for_event(user, event):
     
     return None
  
+
+from photos.task import NewPersonAdded
 def accept_invite(request, token):
     invite = get_object_or_404(
         EventInvite,
@@ -124,7 +126,7 @@ def accept_invite(request, token):
 
     invite.is_active = False
     invite.save()
-
+    NewPersonAdded.delay(request.user.pk, invite.event.pk)    
     return Response({"status": "joined"})
 
 

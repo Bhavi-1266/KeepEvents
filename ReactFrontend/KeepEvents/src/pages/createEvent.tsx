@@ -61,7 +61,7 @@ function CreateEvent() {
 
       const unsubscribe = subscribe("photo_liked", (data) => {
         if (data.userid !== currentUser.userid) return;
-        if (data.likedBy == currentUser.username) return;
+        if (data.likedById == currentUser.userid) return;
         toast.success(`${data.likedBy  } liked your photo`);
         
         
@@ -72,8 +72,20 @@ function CreateEvent() {
       };
     } , [currentUser?.userid , subscribe]); // Only resubscribe if userId changes
 
-
- 
+  
+ useEffect(() => {
+        if (!currentUser) return;
+  
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== currentUser.userid) return;
+          if (data.commentedBy == currentUser.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [currentUser?.userid]); // Only resubscribe if userId changes
 
 
   const handleChange = (

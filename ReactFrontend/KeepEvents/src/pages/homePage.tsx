@@ -20,6 +20,8 @@ import type { Event } from "../types/event";
 
 import { useWebSocket } from "../contexts/WebSocketContext";
 
+import JSZip from "jszip";
+
 function HomePage() {
   const navigate = useNavigate();
 
@@ -60,7 +62,44 @@ function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const scrollAccumulator = useRef(0); // To handle sub-pixel scrolling for smoothness
 
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    let animationFrameId: number;
+
+    const animate = () => {
+      if (!isPaused && container) {
+        // Adjust speed here (0.5 is slow and smooth, 1 is standard, 2 is fast)
+        scrollAccumulator.current += 0.5; 
+        
+        // Only update DOM if the integer value changes to avoid layout thrashing
+        if (scrollAccumulator.current >= 1) {
+          container.scrollLeft += Math.floor(scrollAccumulator.current);
+          scrollAccumulator.current -= Math.floor(scrollAccumulator.current);
+        }
+
+        // Optional: Infinite Loop Logic (Reset to 0 when end reached)
+        // If you want it to stop at the end, remove this if block.
+        if (
+          container.scrollLeft + container.clientWidth >=
+          container.scrollWidth - 1
+        ) {
+           // Uncomment line below to loop back to start immediately
+           // container.scrollLeft = 0; 
+        }
+      }
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isPaused, recentPhotos]); // Re-run if photos change to ensure smooth continuation
   const { subscribe } = useWebSocket();
   // Load initial data
   useEffect(() => {
@@ -146,19 +185,87 @@ function HomePage() {
   
         const unsubscribe = subscribe("photo_liked", (data) => {
           if (data.userid !== user.userid) return;
-          if (data.likedBy == user.username) return;
+          if (data.likedById == user.userid) return;
           toast.success(`${data.likedBy  } liked your photo`);
-          
-        
-  
-          
         });
   
         return () => {
           unsubscribe();
         };
       } , [user?.userid]); // Only resubscribe if userId changes
+
+      useEffect(() => {
+        if (!user) return;
   
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== user.userid) return;
+          if (data.commentedBy == user.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [user?.userid]); // Only resubscribe if userId changes
+  // ✅ Bulk Download Handler (Fixed for HomePage)
+  // ✅ Bulk Download as ZIP (Single File, No Multiple Prompts)
+  const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
+
+    const zip = new JSZip();
+    
+    // 1. Combine and filter photos
+    const allOnScreenPhotos = [...trendingPhotos, ...recentPhotos];
+    const uniquePhotos = new Map(allOnScreenPhotos.map(p => [p.photoid, p]));
+    const photosToDownload = Array.from(uniquePhotos.values()).filter(p => selectedIds.has(p.photoid));
+
+    toast.success(`Preparing ${photosToDownload.length} photos for download...`);
+
+    // 2. Fetch all images and add to ZIP
+    const downloadPromises = photosToDownload.map(async (photo) => {
+      try {
+        const imageUrl = photo.photoFile ;
+        if (!imageUrl) return;
+
+        // Fetch the image data
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        // Get extension (jpg/png)
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const filename = `photo-${photo.photoid}.${ext}`;
+
+        // Add to zip folder
+        zip.file(filename, blob);
+      } catch (err) {
+        console.error(`Failed to load photo ${photo.photoid}`, err);
+      }
+    });
+
+    // Wait for all downloads to finish fetching
+    await Promise.all(downloadPromises);
+
+    // 3. Generate the zip file and trigger ONE download
+    try {
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipUrl = window.URL.createObjectURL(content);
+
+      const link = document.createElement("a");
+      link.href = zipUrl;
+      link.download = `event-photos-${new Date().toISOString().slice(0,10)}.zip`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      window.URL.revokeObjectURL(zipUrl);
+      toast.success("Photos downloaded successfully!");
+      
+      handleClear(); // Uncomment if you want to clear selection after
+    } catch (err) {
+      toast.error("Failed to create zip file");
+    }
+  };
   const loadMoreRecent = async () => {
     if (loadingMore || !recentNextUrl) return;
     setLoadingMore(true);
@@ -343,34 +450,51 @@ if (loading)
 
       {/* RECENTLY ADDED */}
       <section>
-        <div className="flex items-center justify-between mb-6 px-1">
-           <h2 className="text-2xl font-black text-[#283618] tracking-tighter uppercase">Recently Added</h2>
-        </div>
-        <div className="flex gap-4.5 overflow-x-auto pb-6 scrollbar-hide px-1 h-72">
-          {recentPhotos.map((photo) => (
-            <div key={photo.photoid} className="min-w-[200px] flex-shrink-0 group">
-              <div className="group-hover:-translate-y-1 transition-transform duration-300">
-                <PhotoCard
-                  photo={photo}
-                  selected={selectedIds.has(photo.photoid)}
-                  selectionMode={selectionMode}
-                  onToggleSelect={toggleSelect}
-                  onClick={() => !selectionMode && setSelectedPhoto(photo)}
-                />
-              </div>
+      <div className="flex items-center justify-between mb-6 px-1">
+        <h2 className="text-2xl font-black text-[#283618] tracking-tighter uppercase">
+          Recently Added
+        </h2>
+      </div>
+
+      {/* Added ref, onMouseEnter, and onMouseLeave here */}
+      <div
+        ref={scrollRef}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        className="flex gap-4.5 overflow-x-auto pb-6 scrollbar-hide px-1 h-72 scroll-smooth"
+      >
+        {recentPhotos.map((photo) => (
+          <div
+            key={photo.photoid}
+            className="min-w-[200px] flex-shrink-0 group"
+          >
+            <div className="group-hover:-translate-y-1 transition-transform duration-300">
+              <PhotoCard
+                photo={photo}
+                selected={selectedIds.has(photo.photoid)}
+                selectionMode={selectionMode}
+                onToggleSelect={toggleSelect}
+                onClick={() => !selectionMode && setSelectedPhoto(photo)}
+              />
             </div>
-          ))}
-        </div>
-        
-        <div ref={recentSentinelRef} className="h-15 flex flex-col items-center justify-center">
-          {loadingMore && <div className="w-6 h-6 border-2 border-[#bc6c25] border-t-transparent rounded-full animate-spin"></div>}
-          {!recentNextUrl && recentPhotos.length > 0 && (
-            <div className="text-[#606c38]/40 text-[10px] font-black uppercase tracking-[0.4em]">
-              Archive Complete 
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        ))}
+      </div>
+
+      <div
+        ref={recentSentinelRef}
+        className="h-15 flex flex-col items-center justify-center"
+      >
+        {loadingMore && (
+          <div className="w-6 h-6 border-2 border-[#bc6c25] border-t-transparent rounded-full animate-spin"></div>
+        )}
+        {!recentNextUrl && recentPhotos.length > 0 && (
+          <div className="text-[#606c38]/40 text-[10px] font-black uppercase tracking-[0.4em]">
+            Archive Complete
+          </div>
+        )}
+      </div>
+    </section>
 
       {/* SELECTION BAR */}
       {selectionMode && (
@@ -378,6 +502,7 @@ if (loading)
           count={selectedIds.size}
           onClear={handleClear}
           onDelete={() => setConfirmDelete(true)}
+          onDownload={handleBulkDownload}
         />
       )}
     </div>

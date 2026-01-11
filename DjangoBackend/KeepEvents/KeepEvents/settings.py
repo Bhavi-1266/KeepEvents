@@ -83,6 +83,11 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_BACKEND = "django-db"
 
+CELERY_TASK_ROUTES = {
+    # Route the specific task to a separate queue
+    'photos.task.NewPersonAdded': {'queue': 'low_priority'},
+    'photos.task.*': {'queue': 'celery'}, # Default queue
+}
 # ==============================================================================
 # Web Sockets CONFIG
 # ==============================================================================

@@ -329,3 +329,112 @@ def process_photo_faces_store_users(self, photo_id):
     # send_to_event(event.eventid, "photo_processed", {"photoid": photo_id})
 
     return photo_id
+
+
+
+
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=10,
+    retry_kwargs={"max_retries": 3},
+    priority=0,  # Lowest priority (0-9 range usually)
+    queue='low_priority' # Recommended: Route this to a separate worker queue
+)
+def NewPersonAdded(self, user_id, event_id):
+    """
+    Called when a new person is added to an event.
+    1. Generates encoding for the NEW user.
+    2. Scans all photos in the event.
+    3. Updates 'photo.Faces' JSON if a match is found.
+    """
+    
+    # -------------------------
+    # 1. Setup & User Encoding
+    # -------------------------
+    try:
+        user = User.objects.get(pk=user_id)
+        if not user.userProfile:
+            return f"User {user.username} has no profile picture."
+            
+        # Generate the encoding for the NEW user (Do this once)
+        user_image = face_recognition.load_image_file(user.userProfile.path)
+        user_encodings = face_recognition.face_encodings(user_image)
+        
+        if not user_encodings:
+            return f"No face found in {user.username}'s profile picture."
+            
+        new_user_encoding = user_encodings[0]
+        
+    except User.DoesNotExist:
+        return f"User {user_id} does not exist."
+
+    # -------------------------
+    # 2. Fetch Relevant Photos
+    # -------------------------
+    # We get all processed photos for this event.
+    # Optimization: You might want to filter out photos where FaceCount == 0
+    photos = Photo.objects.filter(event__pk=event_id, isProcessed=True).exclude(FaceCount=0)
+    
+    print(f"Scanning {photos.count()} photos for user {user.username}...")
+
+    # -------------------------
+    # 3. Iterate & Match
+    # -------------------------
+    for photo in photos:
+        try:
+            # Check if user is already in the Faces list to avoid re-processing
+            existing_faces = photo.Faces or []
+            already_tagged = any(f.get('userid') == user.userid for f in existing_faces)
+            
+            if already_tagged:
+                continue
+
+            # LOAD PHOTO (Heavy Operation)
+            # Since we don't store raw photo encodings in DB, we must reload the file
+            unknown_image = face_recognition.load_image_file(photo.photoFile.path)
+            unknown_face_encodings = face_recognition.face_encodings(unknown_image)
+
+            if not unknown_face_encodings:
+                continue
+
+            # Compare new user against ALL faces in this specific photo
+            # Using your reference threshold of 0.55
+            match_found = False
+            
+            # We calculate distance manually to match your reference logic strictly
+            distances = face_recognition.face_distance(unknown_face_encodings, new_user_encoding)
+            
+            for distance in distances:
+                if distance < 0.55:
+                    match_found = True
+                    break # Found them in this photo
+
+            # -------------------------
+            # 4. Update JSON
+            # -------------------------
+            if match_found:
+                new_face_entry = {
+                    "userid": user.userid,
+                    "username": user.username,
+                }
+                
+                # Append to existing list
+                # We use a fresh list copy to ensure clean JSON serialization
+                updated_faces = list(existing_faces)
+                updated_faces.append(new_face_entry)
+                
+                photo.Faces = updated_faces
+                photo.save(update_fields=["Faces"])
+                print(f"Matched {user.username} in Photo {photo.pk}")
+
+        except Exception as e:
+            print(f"Error processing Photo {photo.pk}: {e}")
+            continue
+
+    return f"Finished scanning for {user.username}"
+
+
+

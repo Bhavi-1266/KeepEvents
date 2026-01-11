@@ -77,7 +77,7 @@ function MyInfoPage() {
 
       const unsubscribe = subscribe("photo_liked", (data) => {
         if (data.userid !== user.userid) return;
-        if (data.likedBy == user.username) return;
+        if (data.likedById == user.userid) return;
         toast.success(`${data.likedBy  } liked your photo`);
     
       });
@@ -87,6 +87,19 @@ function MyInfoPage() {
       };
     } , [user?.userid]); // Only resubscribe if userId changes
 
+   useEffect(() => {
+        if (!user) return;
+  
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== user.userid) return;
+          if (data.commentedBy == user.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [user?.userid]); // Only resubscribe if userId changes
 
   // ==================== UPDATE A SINGLE FIELD ====================
   // Called when user types in an input field

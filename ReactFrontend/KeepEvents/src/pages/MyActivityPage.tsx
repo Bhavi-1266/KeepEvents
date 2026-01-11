@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import PhotoCard from "../components/PhotoCard";
 import type { User } from "../types/user";
 import type { Photo } from "../types/photos.ts";
+import JSZip from "jszip";
 import { Search, Calendar } from "lucide-react";
 
 function MyActivityPage() {
@@ -126,6 +127,81 @@ function MyActivityPage() {
       unsubscribe();
     };
   }, [currentUser?.userid]);
+
+   useEffect(() => {
+        if (!currentUser) return;
+  
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== currentUser.userid) return;
+          if (data.commentedBy == currentUser.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [currentUser?.userid]); // Only resubscribe if userId changes
+
+      const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
+
+    const zip = new JSZip();
+    
+    // Get the actual photo objects based on selected IDs
+    const photosToDownload = myClicks.filter((p) => selectedIds.has(p.photoid));
+    
+    
+
+    // Create download promises
+    const downloadPromises = photosToDownload.map(async (photo) => {
+      try {
+        // Ensure this matches your API property (photo.photoFile based on your snippet)
+        const imageUrl = photo.photoFile; 
+        
+        if (!imageUrl) return;
+
+        // Fetch the image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        // Determine extension (jpg/png)
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const filename = `photo-${photo.photoid}.${ext}`;
+
+        // Add to the zip file
+        zip.file(filename, blob);
+      } catch (err) {
+        console.error(`Failed to load photo ${photo.photoid}`, err);
+      }
+    });
+
+    // Wait for all photos to be fetched and added to zip
+    await Promise.all(downloadPromises);
+
+    try {
+      // Generate the single ZIP file
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipUrl = window.URL.createObjectURL(content);
+
+      // Trigger ONE download action
+      const link = document.createElement("a");
+      link.href = zipUrl;
+      link.download = `Event-Photos-${new Date().toISOString().slice(0, 10)}.zip`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup
+      window.URL.revokeObjectURL(zipUrl);
+      toast.success("Download started!");
+      
+      handleClear(); // Clear selection when done
+    } catch (err) {
+      console.error("Failed to zip files", err);
+      toast.error("Failed to generate zip file");
+    }
+  };
 
   /* ---------------- APPLY FILTERS ---------------- */
   useEffect(() => {
@@ -363,7 +439,7 @@ function MyActivityPage() {
       {/* Selection Bar */}
       {selectionMode && (
         <div className="max-w-7xl mx-auto px-6 mt-6">
-          <SelectionBar count={selectedIds.size} onClear={handleClear} onDelete={() => setConfirmDelete(true)} />
+          <SelectionBar count={selectedIds.size} onClear={handleClear} onDelete={() => setConfirmDelete(true)}  onDownload={handleBulkDownload}/>
         </div>
       )}
 

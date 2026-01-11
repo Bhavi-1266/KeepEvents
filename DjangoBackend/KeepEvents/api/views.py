@@ -217,7 +217,7 @@ from guardian.models import UserObjectPermission
 
 from django.db.models import IntegerField
 from django.db.models.functions import Cast
-
+from photos.task import NewPersonAdded
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Events.objects.all()
@@ -324,6 +324,7 @@ class EventViewSet(viewsets.ModelViewSet):
         data = UserSerializer(users, many=True).data
 
         cache.set(cache_key, data, timeout=300)
+        
         return Response(data)
 
     @action(detail=True, methods=["get"], permission_classes=[CanEditEvent, IsAuthenticated])
@@ -349,7 +350,7 @@ class EventViewSet(viewsets.ModelViewSet):
         event = self.get_object()
         user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
         remove_perm("view_event_obj", user, event)
-
+        remove_perm("change_event_obj", user, event)
         invalidate_events_cache_all_users()
         invalidate_activity_summary(user.userid)
 
@@ -360,6 +361,8 @@ class EventViewSet(viewsets.ModelViewSet):
         event = self.get_object()
         user = get_object_or_404(get_user_model(), userid=request.query_params["userid"])
         remove_perm("change_event_obj", user, event)
+        remove_perm("view_event_obj", user, event)
+        
 
         invalidate_events_cache_all_users()
         invalidate_activity_summary(user.userid)
@@ -723,7 +726,8 @@ class PhotoViewSet(viewsets.ModelViewSet):
         # CRITICAL: Clear cache for everyone because the 'likecount' changed for everyone
         # and 'isLiked' changed for this specific user.
         invalidate_all_users_cache()
-        if (liked):
+
+        if (liked and photo.uploadedBy.userid != user.userid):
             send_to_user(
                 user_id=photo.uploadedBy.userid,
                 event="photo_liked",
@@ -732,6 +736,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
                     "userid": photo.uploadedBy.userid,
                     "action": "liked",
                     "likedBy": user.username,
+                    "likedById": user.userid,
                 }
             )
                 
@@ -853,12 +858,32 @@ class CommentViewSet(viewsets.ModelViewSet):
             raise ValidationError({"photo": "This field is required."})
         
         # Continue with save
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        serializer.save(user=user)
 
         # Increment comment count
         photo = Photo.objects.get(pk=photo_id)
+
+        photo.commentcount += 1
+        photo.save(update_fields=['commentcount'])
         # Invalidate caches
         invalidate_all_users_cache()
+
+        
+        
+        send_to_user(
+            user_id=photo.uploadedBy.userid,
+            event="comment_added",
+            data={
+                "photoid": photo.photoid,
+                "userid": photo.uploadedBy.userid,
+                "action": "commented",
+                "comment": self.request.data.get('commentText'),
+                "commentedBy": user.username,
+                "commentedById": user.userid,
+            }
+        )
+                
 
 
 

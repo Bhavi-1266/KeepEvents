@@ -194,7 +194,7 @@ export async function getEventEditors(eventId: number): Promise<any[]> {
 
 
 export async function removeEventViewer(eventId: number, userId: number): Promise<void> {
-  const response = await fetch(`/api/events/${eventId}/remove_viewer/?user_id=${userId}`, {
+  const response = await fetch(`/api/events/${eventId}/remove_viewer/?userid=${userId}`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -202,7 +202,7 @@ export async function removeEventViewer(eventId: number, userId: number): Promis
 }
 
 export async function removeEventEditor(eventId: number, userId: number): Promise<void> {
-  const response = await fetch(`/api/events/${eventId}/remove_editor/?user_id=${userId}`, {
+  const response = await fetch(`/api/events/${eventId}/remove_editor/?userid=${userId}`, {
     method: "DELETE",
     credentials: "include",
   });

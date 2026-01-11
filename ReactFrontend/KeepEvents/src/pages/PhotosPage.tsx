@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import type { User } from "../types/user";
 import { getMe } from "../services/auth";
+import JSZip from "jszip";
 import NavBar from "../components/navBar";
 import { Search, Calendar } from "lucide-react";
 
@@ -90,6 +91,7 @@ function PhotosGallery() {
 
     const unsubscribe = subscribe("photo_liked", (data) => {
       if (data.userid !== currentUser.userid) return;
+      if (data.likedById == currentUser.userid) return;
       toast.success(`${data.likedBy} liked your photo`);
     });
 
@@ -97,8 +99,79 @@ function PhotosGallery() {
       unsubscribe();
     };
   }, [currentUser?.userid]);
+   useEffect(() => {
+        if (!currentUser) return;
+  
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== currentUser.userid) return;
+          if (data.commentedBy == currentUser.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [currentUser?.userid]); // Only resubscribe if userId changes
+const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
 
-  // Apply filters when Sort or FindMe changes
+    const zip = new JSZip();
+    
+    // Get the actual photo objects based on selected IDs
+    const photosToDownload = photos.filter((p) => selectedIds.has(p.photoid));
+    
+    
+
+    // Create download promises
+    const downloadPromises = photosToDownload.map(async (photo) => {
+      try {
+        // Ensure this matches your API property (photo.photoFile based on your snippet)
+        const imageUrl = photo.photoFile; 
+        
+        if (!imageUrl) return;
+
+        // Fetch the image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        // Determine extension (jpg/png)
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const filename = `photo-${photo.photoid}.${ext}`;
+
+        // Add to the zip file
+        zip.file(filename, blob);
+      } catch (err) {
+        console.error(`Failed to load photo ${photo.photoid}`, err);
+      }
+    });
+
+    // Wait for all photos to be fetched and added to zip
+    await Promise.all(downloadPromises);
+
+    try {
+      // Generate the single ZIP file
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipUrl = window.URL.createObjectURL(content);
+
+      // Trigger ONE download action
+      const link = document.createElement("a");
+      link.href = zipUrl;
+      link.download = `Event-Photos-${new Date().toISOString().slice(0, 10)}.zip`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup
+      window.URL.revokeObjectURL(zipUrl);
+      toast.success("Download started!");
+      
+      handleClear(); // Clear selection when done
+    } catch (err) {
+      console.error("Failed to zip files", err);
+      toast.error("Failed to generate zip file");
+    }
+  };  // Apply filters when Sort or FindMe changes
   useEffect(() => {
     applyFilters();
   }, [Sort, FindMe]);
@@ -256,6 +329,7 @@ function PhotosGallery() {
             count={selectedIds.size}
             onClear={handleClear}
             onDelete={() => setConfirmDelete(true)}
+            onDownload={handleBulkDownload}
           />
         </div>
       )}

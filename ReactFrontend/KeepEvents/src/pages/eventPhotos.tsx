@@ -10,12 +10,13 @@ import CreateCard from "../components/CreateCard.tsx";
 import AddPhotosModal from "../components/AddPhotosModal.tsx";
 import type { User } from "../types/user";
 import { getMe } from "../services/auth.ts";
+import { removeEventViewer  , removeEventEditor} from "../services/events.ts";
 import NavBar from "../components/navBar.tsx";
 import SelectionBar from "../components/selectionBar";
 import { toast } from "react-hot-toast";
-import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera } from "lucide-react";
+import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera, Download } from "lucide-react";
 
-
+import JSZip from "jszip";
 import { useWebSocket } from "../contexts/WebSocketContext";
 
 
@@ -91,7 +92,67 @@ function EventPhotos() {
     }
   }, [eventId]);
 
+  // ✅ Bulk Download Handler
+  const handleBulkDownload = async () => {
+    if (selectedIds.size === 0) return;
 
+    const zip = new JSZip();
+    
+    // Get the actual photo objects based on selected IDs
+    const photosToDownload = photos.filter((p) => selectedIds.has(p.photoid));
+    
+    
+
+    // Create download promises
+    const downloadPromises = photosToDownload.map(async (photo) => {
+      try {
+        // Ensure this matches your API property (photo.photoFile based on your snippet)
+        const imageUrl = photo.photoFile; 
+        
+        if (!imageUrl) return;
+
+        // Fetch the image
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        
+        // Determine extension (jpg/png)
+        const ext = blob.type.split('/')[1] || 'jpg';
+        const filename = `photo-${photo.photoid}.${ext}`;
+
+        // Add to the zip file
+        zip.file(filename, blob);
+      } catch (err) {
+        console.error(`Failed to load photo ${photo.photoid}`, err);
+      }
+    });
+
+    // Wait for all photos to be fetched and added to zip
+    await Promise.all(downloadPromises);
+
+    try {
+      // Generate the single ZIP file
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipUrl = window.URL.createObjectURL(content);
+
+      // Trigger ONE download action
+      const link = document.createElement("a");
+      link.href = zipUrl;
+      link.download = `Event-Photos-${new Date().toISOString().slice(0, 10)}.zip`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Cleanup
+      window.URL.revokeObjectURL(zipUrl);
+      toast.success("Download started!");
+      
+      handleClear(); // Clear selection when done
+    } catch (err) {
+      console.error("Failed to zip files", err);
+      toast.error("Failed to generate zip file");
+    }
+  };
   // ✅ Load initial data
   useEffect(() => {
     const init = async () => {
@@ -138,7 +199,33 @@ function EventPhotos() {
     init();
   }, [eventId, navigate]);
 
+  const handleRemoveUser = async (userid: number , Editor: boolean) => {
+    toast.loading("Removing user...");
+    if (userid === currentUser?.userid) {
+      toast.dismiss();
+      toast.error("You cannot remove yourself");
 
+      return;
+    }
+
+    if (userid) {
+      try {
+        if (!Editor) {
+          await removeEventViewer(Number(eventId), userid);
+        } else {
+          await removeEventEditor(Number(eventId), userid);
+        }
+        toast.success("User removed");
+        loadEventPeople();
+      } catch (err) {
+        toast.error("Failed to remove user");
+      }finally {
+        toast.dismiss();
+        toast.success("User removed");
+      }
+    }
+
+  }
 
   // ✅ Connect to WebSocket ONCE when user is available
     // useEffect(() => {
@@ -178,7 +265,7 @@ function EventPhotos() {
 
       const unsubscribe = subscribe("photo_liked", (data) => {
         if (data.userid !== currentUser.userid) return;
-        if (data.likedBy == currentUser.username) return;
+        if (data.likedById == currentUser.userid) return;
         toast.success(`${data.likedBy  } liked your photo`);
         
         setPhotos(prev => 
@@ -196,6 +283,20 @@ function EventPhotos() {
         unsubscribe();
       };
     } , [currentUser?.userid , subscribe]); // Only resubscribe if userId changes
+
+ useEffect(() => {
+        if (!currentUser) return;
+  
+        const unsubscribe = subscribe("comment_added", (data) => {
+          if (data.userid !== currentUser.userid) return;
+          if (data.commentedBy == currentUser.username) return;
+          toast.success(`${data.commentedBy  } commented ${data.comment}`);
+        });
+  
+        return () => {  
+          unsubscribe();
+        };
+      } , [currentUser?.userid]); // Only resubscribe if userId changes
 
 
   // ✅ Load event people
@@ -327,21 +428,7 @@ function EventPhotos() {
     setHasEventChanges(false);
   };
 
-  // const ReloadPhotos = async () => {
-  //   if (!eventId) return;
-  //   try {
-  //     const data = await LoadEventPhotos(Number(eventId), 0);
-  //     setPhotos(data.results || []);
-  //     setNextUrl(data.next || null);
-  //   } catch (err: any) {
-  //     console.error("Load failed:", err);
-  //     if (err.message?.includes("401") || err.message?.includes("403")) {
-  //       navigate("/", { replace: true });
-  //     } else {
-  //       setError(err.message || "Failed to load event");
-  //     }
-  //   }
-  // }
+  
   const saveEventChanges = async () => {
     if (!event || !eventId) return;
     try {
@@ -664,9 +751,17 @@ function EventPhotos() {
                       {editors.map((u) => (
                         <li
                           key={u.id}
-                          className="px-3 py-2 bg-emerald-50 rounded-lg text-sm"
+                          className="px-3 py-2 bg-emerald-50 rounded-lg text-sm flex justify-between items-center"
                         >
                           {u.username}
+                          {currentUser.userid == event?.eventCreator && u.id !== event?.eventCreator && (
+                            <button
+                              onClick={() => handleRemoveUser(u.userid , true)}
+                              className="ml-2 text-red-500 hover:text-red-700 transition duration-300 bg-red-100 rounded-full w-6 h-6 flex items-center justify-center"
+                            >
+                              x
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -685,9 +780,17 @@ function EventPhotos() {
                       {viewers.map((u) => (
                         <li
                           key={u.id}
-                          className="px-3 py-2 bg-blue-50 rounded-lg text-sm"
+                          className="px-3 py-2 bg-blue-50 rounded-lg text-sm flex justify-between items-center"
                         >
-                          {u.username}
+                          {u.username} 
+                          {currentUser.userid == event?.eventCreator && u.id !== event?.eventCreator && (
+                            <button
+                              onClick={() => handleRemoveUser(u.userid , false)}
+                              className="ml-2 text-red-500 hover:text-red-700 bg-red-100 rounded-full w-6 h-6 flex items-center justify-center"
+                            >
+                              x
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -705,6 +808,7 @@ function EventPhotos() {
             count={selectedIds.size}
             onClear={handleClear}
             onDelete={() => setConfirmDelete(true)}
+            onDownload={handleBulkDownload}
           />
         </div>
       )}
