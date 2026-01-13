@@ -111,29 +111,7 @@ function EventsPage() {
 
 
 
- if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fefae0]/40">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#bc6c25] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-black uppercase tracking-widest text-[#606c38]">
-            Loading Events
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fefae0]/40">
-        <p className="text-[#606c38] font-black uppercase tracking-widest text-xs">
-          Not logged in
-        </p>
-      </div>
-    );
-  }
-
+ 
   // Define the search handler to be used by the form
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); // Prevents page reload
@@ -150,179 +128,242 @@ function EventsPage() {
       console.error(err);
     }
   };
+if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          {/* Colorful Spinner */}
+          <div className="w-12 h-12 border-4 border-slate-100 border-t-[#aaff99] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-bold text-slate-400 tracking-widest uppercase">Loading Events...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="bg-[#fff0f0] p-8 rounded-[2rem] border border-red-100 shadow-xl">
+           <p className="text-[#ff3333] font-black text-xl tracking-tight">Please log in to view events.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#fefae0]/30 font-sans text-[#283618]">
-      <NavBar />
+    <div className="relative min-h-screen w-full bg-white font-sans overflow-hidden text-slate-800">
       
-      <div className="max-w-[1400px] mx-auto px-6 pt-8 pb-12">
+      {/* --- Background Aesthetics --- */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+          33% { transform: translate(30px, -50px) scale(1.1) rotate(5deg); }
+          66% { transform: translate(-20px, 20px) scale(0.9) rotate(-5deg); }
+        }
+        .animate-float-1 { animation: float 25s infinite ease-in-out; }
+        .animate-float-2 { animation: float 22s infinite ease-in-out -2s; }
+        .animate-float-3 { animation: float 30s infinite ease-in-out -10s; }
         
-        {/* Page Header */}
-        <div className="mb-8 flex items-end justify-between">
-           <div>
-              <span className="text-[#bc6c25] font-black text-[10px] uppercase tracking-[0.3em]">Discover</span>
-              <h1 className="text-4xl font-black text-[#283618] tracking-tighter uppercase mt-1">Events</h1>
-           </div>
-        </div>
+        .bg-dot-pattern {
+          background-image: radial-gradient(#f1f5f9 2px, transparent 2px);
+          background-size: 34px 34px;
+        }
+      `}</style>
 
-        {/* Filter Container */}
-        <div className="bg-white rounded-xl shadow-xl shadow-[#283618]/5 border border-[#dda15e]/20 p-6 mb-10">
+      <div className="absolute inset-0 bg-dot-pattern opacity-60 z-0 pointer-events-none" />
+
+      {/* Colorful Watercolor Blobs */}
+      <div className="absolute top-[-5%] left-[-5%] w-[45rem] h-[45rem] rounded-full mix-blend-multiply filter blur-[120px] opacity-20 animate-float-1 pointer-events-none" style={{ backgroundColor: '#aaff99' }} /> {/* Green */}
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50rem] h-[50rem] rounded-full mix-blend-multiply filter blur-[100px] opacity-25 animate-float-2 pointer-events-none" style={{ backgroundColor: '#ff9999' }} /> {/* Pink */}
+      <div className="absolute top-[30%] right-[10%] w-[35rem] h-[35rem] rounded-full mix-blend-multiply filter blur-[90px] opacity-20 animate-float-3 pointer-events-none" style={{ backgroundColor: '#99c0ff' }} /> {/* Blue */}
+
+      <div className="relative z-10">
+        <NavBar />
+      
+        <div className="max-w-[1400px] mx-auto px-6 py-12 pb-24">
           
-          {/* Wrapped in form to enable "Enter" key submission */}
-          <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 items-end">
+          {/* Page Header */}
+          <div className="mb-10 flex items-end justify-between">
+             <div>
+                <span className="text-[#aaff99] font-black text-[10px] uppercase tracking-[0.3em] flex items-center gap-2 mb-2">
+                   <span className="w-10 h-[2px] bg-[#aaff99]"></span> Discover
+                </span>
+                <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Events</h1>
+             </div>
+          </div>
+
+          {/* Filter Container */}
+          <div className="bg-white/60 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-8 mb-12">
             
-            {/* Search Input */}
-            <div className="flex-1 min-w-[220px]">
-              <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
-                Search
-              </label>
-              <input 
-                type="text"
-                placeholder="SEARCH EVENTS..."
-                className="w-full bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] placeholder:text-[#606c38]/40 outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
-                onChange={(e) => setSearch(e.target.value)}
-                value={Search}
-              />
-            </div>
-
-            {/* Location Select */}
-            <div className="w-full sm:w-auto">
-               <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
-                Add Location
-              </label>
-              <select 
-                defaultValue=""
-                onChange={(e) => {
-                    const value = e.target.value;
-                    if (!locationToFilter.includes(value)) {
-                      setLocationToFilter([...locationToFilter, value]);
-                    }
-                    e.target.selectedIndex = 0;
-                }} 
-                name="location"
-                className="w-full sm:w-56 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide appearance-none cursor-pointer"
-              >
-                <option value="" disabled>SELECT LOCATION</option>
-                {[...locations].map(location => (
-                  <option key={location} value={location}>{location}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sort Select */}
-            <div className="w-full sm:w-auto">
-               <label className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
-                Sort By
-              </label>
-              <select
-                defaultValue=""
-                onChange={(e) => setSort(e.target.value)}
-                name="sort"
-                className="w-full sm:w-56 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-4 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide appearance-none cursor-pointer"
-                >
-                    <option value="" disabled>DEFAULT</option>
-                    {sorts.map((sort) => (
-                        <option key={sort.value} value={sort.value}>
-                        {sort.label}
-                        </option>
-                    ))}
-              </select>
-            </div>
-
-            {/* Date Range */}
-            <div className="flex gap-2 w-full sm:w-auto">
-              <div>
-                <label htmlFor="start-date" className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
-                  From
+            {/* Wrapped in form to enable "Enter" key submission */}
+            <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-6 items-end">
+              
+              {/* Search Input - GREEN focus */}
+              <div className="flex-1 min-w-[280px]">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                  Search
                 </label>
-                <input
-                  id="start-date"
-                  type="date"
-                  value={startingDate}
-                  onChange={(e) => setStartingDate(e.target.value)}
-                  className="w-full sm:w-36 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-3 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
+                <input 
+                  type="text"
+                  placeholder="Find an event..."
+                  className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 placeholder-slate-300 outline-none focus:border-[#aaff99] focus:ring-4 focus:ring-green-100 transition-all shadow-sm"
+                  onChange={(e) => setSearch(e.target.value)}
+                  value={Search}
                 />
               </div>
 
-              <div>
-                <label htmlFor="end-date" className="block text-[10px] font-black text-[#606c38] uppercase tracking-widest mb-2">
-                  To
+              {/* Location Select - BLUE focus */}
+              <div className="w-full sm:w-auto min-w-[200px]">
+                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                  Location
                 </label>
-                <input
-                  id="end-date"
-                  type="date"
-                  value={endingDate}
-                  min={startingDate} 
-                  onChange={(e) => setEndingDate(e.target.value)}
-                  className="w-full sm:w-36 bg-[#fefae0]/30 border border-[#606c38]/20 rounded-lg px-3 py-3 text-xs font-bold text-[#283618] outline-none focus:border-[#bc6c25] transition-colors uppercase tracking-wide"
-                />
-              </div>
-            </div>
-
-            {/* Search Button (Type Submit) */}
-            <button
-              type="submit" 
-              className="w-full sm:w-auto h-[42px] bg-[#bc6c25] hover:bg-[#283618] text-[#fefae0] rounded-lg px-8 text-xs font-black uppercase tracking-widest transition-all hover:shadow-lg active:scale-95"
-            >
-              Search
-            </button>
-          </form>
-
-          {/* Active Location Chips */}
-          {locationToFilter.length > 0 && (
-             <div className="mt-6 pt-4 border-t border-[#dda15e]/20 flex flex-wrap items-center gap-3">
-                <span className="text-[10px] font-bold text-[#bc6c25] uppercase tracking-widest">Active Filters:</span>
-                <div className="flex flex-wrap gap-2">
-                    {locationToFilter.map(location => (
-                        <div
-                        key={location}
-                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-[#283618] text-[#fefae0] rounded-lg text-[10px] font-bold uppercase tracking-wide"
-                        >
-                            <span>{location}</span>
-                            <button
-                                type="button" 
-                                onClick={() => { setLocationToFilter(locationToFilter.filter(loc => loc !== location)); }}
-                                className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-[#bc6c25] text-[#fefae0] transition-colors"
-                            >
-                                ×
-                            </button>
-                        </div>
+                <div className="relative">
+                  <select 
+                    defaultValue=""
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        if (!locationToFilter.includes(value)) {
+                          setLocationToFilter([...locationToFilter, value]);
+                        }
+                        e.target.selectedIndex = 0;
+                    }} 
+                    name="location"
+                    className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#99c0ff] focus:ring-4 focus:ring-blue-100 transition-all appearance-none cursor-pointer shadow-sm"
+                  >
+                    <option value="" disabled>Select Location</option>
+                    {[...locations].map(location => (
+                      <option key={location} value={location}>{location}</option>
                     ))}
+                  </select>
+                  {/* Custom Arrow */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
                 </div>
+              </div>
+
+              {/* Sort Select - ORANGE focus */}
+              <div className="w-full sm:w-auto min-w-[200px]">
+                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                  Sort By
+                </label>
+                <div className="relative">
+                  <select
+                    defaultValue=""
+                    onChange={(e) => setSort(e.target.value)}
+                    name="sort"
+                    className="w-full bg-white border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#ffcc99] focus:ring-4 focus:ring-orange-100 transition-all appearance-none cursor-pointer shadow-sm"
+                    >
+                      <option value="" disabled>Default</option>
+                      {sorts.map((sort) => (
+                          <option key={sort.value} value={sort.value}>
+                          {sort.label}
+                          </option>
+                      ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Range - PINK focus */}
+              <div className="flex gap-4 w-full xl:w-auto">
+                <div>
+                  <label htmlFor="start-date" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                    From
+                  </label>
+                  <input
+                    id="start-date"
+                    type="date"
+                    value={startingDate}
+                    onChange={(e) => setStartingDate(e.target.value)}
+                    className="w-full sm:w-40 bg-white border border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#ff9999] focus:ring-4 focus:ring-red-100 transition-all shadow-sm"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="end-date" className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+                    To
+                  </label>
+                  <input
+                    id="end-date"
+                    type="date"
+                    value={endingDate}
+                    min={startingDate} 
+                    onChange={(e) => setEndingDate(e.target.value)}
+                    className="w-full sm:w-40 bg-white border border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold text-slate-700 outline-none focus:border-[#ff9999] focus:ring-4 focus:ring-red-100 transition-all shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Search Button (Type Submit) */}
+              <button
+                type="submit" 
+                className="w-full xl:w-auto h-[54px] bg-[#aaff99] hover:bg-[#99ee88] text-[#2f5c2f] rounded-2xl px-10 text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-green-200 hover:-translate-y-1 active:scale-95 active:shadow-none"
+              >
+                Search
+              </button>
+            </form>
+
+            {/* Active Location Chips */}
+            {locationToFilter.length > 0 && (
+               <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Filters:</span>
+                  <div className="flex flex-wrap gap-2">
+                      {locationToFilter.map(location => (
+                          <div
+                          key={location}
+                          className="flex items-center gap-2 pl-4 pr-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-wide border border-slate-200"
+                          >
+                              <span>{location}</span>
+                              <button
+                                  type="button" 
+                                  onClick={() => { setLocationToFilter(locationToFilter.filter(loc => loc !== location)); }}
+                                  className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-300 text-slate-400 hover:text-white transition-colors"
+                              >
+                                  ×
+                              </button>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-[#fff0f0] border-l-4 border-[#ff3333] text-[#cc0000] px-6 py-4 rounded-r-xl shadow-sm mb-8 font-bold text-sm flex items-center gap-3">
+               <span>⚠️</span> {error}
             </div>
           )}
-        </div>
 
-        {error && (
-          <p className="text-red-600 font-bold uppercase text-xs tracking-widest text-center mb-6 bg-red-100 py-2 rounded">
-            {error}
-          </p>
-        )}
-
-        {/* Events Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative">
-            {/* Create Card */}
-            <div className="h-full min-h-[300px]">
-                 <CreateCard ToCreate="Event" onClick={() => navigate("/EventsCreate")} />
-            </div>
-            
-            {/* Render Events */}
-            {events.length > 0 ? (
-                events.map((event) => (
-                    <EventCard
-                        key={event.eventid}
-                        event={event}
-                        onClick={() => navigate(`/Events/${event.eventid}`)}
-                    />
-                ))
-            ) : (
-                /* Empty State (if not initial load) */
-                <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex items-center justify-center h-full min-h-[300px] border-2 border-dashed border-[#606c38]/20 rounded-xl">
-                     <span className="text-[#606c38] text-xs font-bold uppercase tracking-widest opacity-60">
-                        No events found
-                     </span>
-                </div>
-            )}
+          {/* Events Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 relative">
+              {/* Create Card - Matches CreateCard styling usually, but wrapper here for layout */}
+              <div className="h-full min-h-[350px]">
+                   <CreateCard ToCreate="Event" onClick={() => navigate("/EventsCreate")} />
+              </div>
+              
+              {/* Render Events */}
+              {events.length > 0 ? (
+                  events.map((event) => (
+                      <div key={event.eventid} className="transition-transform duration-300 hover:scale-[1.02]">
+                        <EventCard
+                            event={event}
+                            onClick={() => navigate(`/Events/${event.eventid}`)}
+                        />
+                      </div>
+                  ))
+              ) : (
+                  /* Empty State (if not initial load) */
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col items-center justify-center h-full min-h-[350px] bg-white/40 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+                       <div className="text-4xl mb-4 opacity-30">📅</div>
+                       <span className="text-slate-400 text-xs font-black uppercase tracking-widest">
+                          No events found
+                       </span>
+                  </div>
+              )}
+          </div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import MyInfoPage from "./pages/MyInfoPage";
 import EventsPage from "./pages/EventsPage";
 import PhotosPage from "./pages/PhotosPage";
 import AcceptInvite from "./pages/AcceptInvite";
+import ResetPassord from "./pages/ResetPass";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           <Route path="/Events" element={<EventsPage />} />
           <Route path="/Photos" element={<PhotosPage />} />
           <Route path="/invite/:token" element={<AcceptInvite />} />
+          <Route path="/forgot-password" element={<ResetPassord />} />
         </Routes>
       </WebSocketProvider>
     </>

@@ -170,12 +170,27 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.method in ("GET", "HEAD", "OPTIONS"):
             return [ReadOnly()]
         return [IsSelfOrAdmin()]
+
+    @action(detail=False, methods=["post"], authentication_classes=[],url_path="reset-password") 
+    def ResetPassword(self, request):
+        email = request.data.get("email")
+        new_password = request.data.get("new_password")
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response(
+                {"error": "User not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        user.set_password(new_password)
+        user.save()
+        return Response(UserSerializer(request.user).data)
     
 
 from rest_framework.decorators import api_view, permission_classes
 
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@api_view(["POST"] )
+@permission_classes([])
 def logout(request):
     response = Response(
         {"detail": "Logged out successfully"},
@@ -422,7 +437,7 @@ class PhotoFilter(FilterSet):
     # unified search (text + tags + location)
     search = CharFilter(method="filter_search")
 
-    uploader = NumberFilter(field_name="uploadedBy__id", lookup_expr="exact")
+    uploader = NumberFilter(field_name="uploadedBy")
     tag = CharFilter(method="filter_by_tag")
     date = DateFilter(field_name="uploadDate", lookup_expr="date")
     date_after = DateFilter(field_name="uploadDate", lookup_expr="date__gte")

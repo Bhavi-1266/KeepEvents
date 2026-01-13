@@ -191,7 +191,7 @@ export async function GetMyClicks(
   const { offset = 0, limit = 20, ordering = "-uploadDate", filters = {} } = options;
 
   const params = new URLSearchParams({
-    user: userId.toString(),
+    uploader: userId.toString(),
     limit: limit.toString(),
     offset: offset.toString(),
   });

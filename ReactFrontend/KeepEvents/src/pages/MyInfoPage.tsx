@@ -241,12 +241,15 @@ function MyInfoPage() {
   };
 
   // ==================== LOADING STATE ====================
-  if (loading) {
+ if (loading) {
     return (
-      <>
-        <NavBar />
-        <p className="p-6">Loading profile...</p>
-      </>
+      <div className="min-h-screen w-full flex items-center justify-center bg-white">
+        <div className="text-center">
+          {/* Changed spinner to Tea Green */}
+          <div className="w-12 h-12 border-4 border-slate-100 border-t-[#aaff99] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-bold text-slate-400 tracking-widest uppercase">Loading Profile...</p>
+        </div>
+      </div>
     );
   }
 
@@ -254,161 +257,213 @@ function MyInfoPage() {
   if (!user) return null;
 
   // ==================== PROPS FOR EDITABLE INPUTS ====================
-  // These props are passed to all EditableInput components
   const editableProps = {
-    editingField,           // Which field is currently being edited
-    onEdit: setEditingField, // Function to start editing a field
-    onChange: updateField,   // Function to update field value
-    onRevert: revertField,   // Function to cancel editing a field
+    editingField,
+    onEdit: setEditingField,
+    onChange: updateField,
+    onRevert: revertField,
   };
 
   // ==================== RENDER UI ====================
   return (
-    <div className="min-h-screen bg-[#fefae0]/30 font-sans text-[#283618]">
-      <NavBar />
+    <div className="relative min-h-screen w-full bg-white font-sans overflow-hidden">
+      
+      {/* --- Background Aesthetics --- */}
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(60px, -50px) scale(1.1); }
+          66% { transform: translate(-40px, 40px) scale(0.9); }
+        }
+        @keyframes shine {
+          100% { left: 125%; }
+        }
+        .animate-float-1 { animation: float 20s infinite ease-in-out; }
+        .animate-float-2 { animation: float 25s infinite ease-in-out -5s; }
+        .animate-shine { animation: shine 2s infinite; }
+        .bg-dot-pattern {
+          background-image: radial-gradient(#f1f5f9 2px, transparent 2px);
+          background-size: 34px 34px;
+        }
+      `}</style>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-8 pt-12">
-        
-        {/* ==================== PROFILE HEADER SECTION ==================== */}
-        <div className="bg-white rounded-xl shadow-xl shadow-[#283618]/5 border border-[#dda15e]/20 p-8 flex flex-col sm:flex-row items-center space-y-6 sm:space-y-0 sm:space-x-10">
+      <div className="absolute inset-0 bg-dot-pattern opacity-50 z-0 pointer-events-none" />
+      
+      {/* Colorful Blobs */}
+      <div className="absolute top-[-10%] right-[-5%] w-[45rem] h-[45rem] rounded-full mix-blend-multiply filter blur-[120px] opacity-25 animate-float-1 pointer-events-none" style={{ backgroundColor: '#ff9999' }} /> 
+      {/* ^ Powder Blush */}
+      <div className="absolute bottom-[-10%] left-[-5%] w-[45rem] h-[45rem] rounded-full mix-blend-multiply filter blur-[120px] opacity-25 animate-float-2 pointer-events-none" style={{ backgroundColor: '#aaff99' }} />
+      {/* ^ Tea Green */}
+
+      <div className="relative z-10">
+        <NavBar />
+
+        <div className="max-w-4xl mx-auto p-6 space-y-8 pt-12 pb-32">
           
-          {/* PROFILE IMAGE */}
-          <div className="relative group">
-            <div className="w-40 h-40 rounded-full border-4 border-[#fefae0] shadow-lg overflow-hidden ring-1 ring-[#606c38]/20">
-              <img
-                src={
-                  profileImageFile
-                    ? URL.createObjectURL(profileImageFile)
-                    : user.userProfile || "../../src/assets/ProfileFace.png"
-                }
-                alt="Profile"
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  onProfileImageSelect(e.target.files[0]);
-                }
-              }}
-            />
-
-            {/* EDIT/REVERT BUTTON */}
-            <button
-              onClick={
-                profileImageFile
-                  ? revertProfileImage
-                  : () => fileInputRef.current?.click()
-              }
-              className={`absolute bottom-2 right-2 p-2.5 rounded-lg border-2 shadow-md transition-all active:scale-95 ${
-                profileImageFile 
-                  ? "bg-red-500 border-red-600 text-white hover:bg-red-700" 
-                  : "bg-[#bc6c25] border-[#bc6c25] text-white hover:bg-[#283618]"
-              }`}
-            >
-              {profileImageFile ? <Eraser size={16} /> : <Pencil size={16} />}
-            </button>
-          </div>
-
-          {/* USER INFO */}
-          <div className="space-y-4 w-full text-center sm:text-left">
-            <div className="relative inline-block w-full">
-               <span className="text-[#bc6c25] font-black text-[10px] uppercase tracking-[0.3em] block mb-1">Identity</span>
-              {editingUsername ? (
-                <input
-                  value={tempUsername}
-                  onChange={(e) => updateUsername(e.target.value)}
-                  className="text-2xl font-black border-2 border-[#bc6c25] p-2 rounded-lg w-full bg-[#fefae0]/50 outline-none uppercase tracking-tighter"
-                  placeholder="Username"
+          {/* ==================== PROFILE HEADER CARD ==================== */}
+          <div className="bg-white/60 backdrop-blur-3xl rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-white/80 p-10 flex flex-col sm:flex-row items-center space-y-8 sm:space-y-0 sm:space-x-12">
+            
+            {/* PROFILE IMAGE */}
+            <div className="relative group">
+              <div className="w-44 h-44 rounded-full border-4 border-white shadow-2xl shadow-green-900/5 overflow-hidden relative z-10">
+                <img
+                  src={
+                    profileImageFile
+                      ? URL.createObjectURL(profileImageFile)
+                      : user.userProfile || "../../src/assets/ProfileFace.png"
+                  }
+                  alt="Profile"
+                  className="w-full h-full object-cover"
                 />
-              ) : (
-                <h1 className="text-4xl font-black text-[#283618] tracking-tighter uppercase">{tempUsername}</h1>
-              )}
-              
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    onProfileImageSelect(e.target.files[0]);
+                  }
+                }}
+              />
+
+              {/* EDIT/REVERT BUTTON */}
+              {/* Uses Electric Aqua (#99f7ff) for Edit, Powder Blush (#ff9999) for Revert */}
               <button
-                onClick={editingUsername ? revertUsername : startEditingUsername}
-                className={`absolute top-0 right-0 p-2 rounded-lg border-2 transition-all ${
-                  editingUsername 
-                    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100" 
-                    : "bg-white border-[#606c38]/10 text-[#606c38] hover:border-[#bc6c25]"
+                onClick={
+                  profileImageFile
+                    ? revertProfileImage
+                    : () => fileInputRef.current?.click()
+                }
+                className={`absolute bottom-2 right-2 z-20 p-3.5 rounded-2xl border-2 border-white shadow-xl transition-all active:scale-95 group-hover:scale-110 ${
+                  profileImageFile 
+                    ? "bg-[#ff9999] text-[#550000] rotate-12" 
+                    : "bg-[#99f7ff] text-[#004d4d] hover:bg-[#7cefff]"
                 }`}
               >
-                {editingUsername ? <Eraser size={14} /> : <Pencil size={14} />}
+                {profileImageFile ? <Eraser size={20} /> : <Pencil size={20} />}
               </button>
             </div>
-            
-            <p className="text-[#606c38] font-bold text-xs uppercase tracking-[0.2em] bg-[#606c38]/5 inline-block px-3 py-1 rounded-full">
-              {user.email}
-            </p>
+
+            {/* USER INFO */}
+            <div className="space-y-3 w-full text-center sm:text-left">
+              <div className="relative inline-block w-full">
+                 {/* Identity Label in Pink */}
+                 <span className="text-[#ff9999] font-black text-[10px] uppercase tracking-[0.3em] block mb-2">
+                   Identity
+                 </span>
+                
+                {editingUsername ? (
+                  <div className="relative">
+                    <input
+                      value={tempUsername}
+                      onChange={(e) => updateUsername(e.target.value)}
+                      className="text-4xl font-black text-slate-900 border-b-2 border-[#aaff99] pb-1 w-full bg-transparent outline-none tracking-tight"
+                      placeholder="Username"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <h1 className="text-5xl font-black text-slate-900 tracking-tighter">{tempUsername}</h1>
+                )}
+                
+                <button
+                  onClick={editingUsername ? revertUsername : startEditingUsername}
+                  className={`absolute top-0 right-0 p-2.5 rounded-xl transition-all ${
+                    editingUsername 
+                      ? "bg-red-50 text-red-500 hover:bg-red-100" 
+                      : "bg-[#f0fdf4] text-[#aaff99] hover:text-[#77cc66]" // Greenish tint
+                  }`}
+                >
+                  {editingUsername ? <Eraser size={16} /> : <Pencil size={16} />}
+                </button>
+              </div>
+              
+              <div className="inline-block px-4 py-1.5 rounded-full bg-slate-50 border border-slate-100">
+                <p className="text-slate-500 font-bold text-xs uppercase tracking-widest">
+                  {user.email}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ==================== BIO SECTION ==================== */}
+          <div className="bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white p-2 shadow-sm group">
+              <EditableInput
+                label="Biography"
+                field="userbio"
+                value={editData.userbio}
+                editingField={editingField}
+                onEdit={setEditingField}
+                onChange={updateField}
+                onRevert={revertField}
+                multiline 
+                className="text-slate-700" 
+              />
+          </div>
+
+          {/* ==================== OTHER FIELDS GRID ==================== */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white p-2 shadow-sm transition-shadow hover:shadow-md">
+              <EditableInput
+                  label="Enrollment No"
+                  field="enrollmentNo"
+                  value={editData.enrollmentNo}
+                  {...editableProps}
+              />
+            </div>
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white p-2 shadow-sm transition-shadow hover:shadow-md">
+              <EditableInput
+                  label="Department"
+                  field="dept"
+                  value={editData.dept}
+                  {...editableProps}
+              />
+            </div>
+            <div className="bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white p-2 shadow-sm transition-shadow hover:shadow-md md:col-span-2">
+              <EditableInput
+                  label="Academic Batch"
+                  field="batch"
+                  value={editData.batch}
+                  {...editableProps}
+              />
+            </div>
           </div>
         </div>
 
-        {/* ==================== BIO SECTION ==================== */}
-        <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1 shadow-sm">
-            <EditableInput
-              label="Biography"
-              field="userbio"
-              value={editData.userbio}
-              editingField={editingField}
-              onEdit={setEditingField}
-              onChange={updateField}
-              onRevert={revertField}
-              multiline 
-            />
-        </div>
+        {/* ==================== FLOATING ACTION BAR ==================== */}
+        {hasChanges && (
+          <div className="fixed bottom-8 left-0 right-0 flex justify-center z-50 animate-in slide-in-from-bottom-6 duration-500">
+            <div className="bg-white/90 backdrop-blur-xl border border-white/50 p-2 rounded-full shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)] flex items-center gap-2">
+              
+              {/* DISCARD: Soft Pink Text */}
+              <button
+                onClick={discardChanges}
+                className="px-6 py-4 rounded-full flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#ff9999] hover:bg-red-50 hover:text-red-600 transition-all"
+              >
+                <X size={16} /> <span className="hidden sm:inline">Discard</span>
+              </button>
+              
+              <div className="w-px h-8 bg-slate-100" />
+              
+              {/* SAVE: Tea Green Background with Dark Green Text */}
+              <button
+                onClick={saveChanges}
+                className="group relative px-8 py-4 bg-[#aaff99] text-[#003300] rounded-full flex items-center gap-2 overflow-hidden shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 transition-all"
+              >
+                <span className="relative z-10 text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
+                  <Save size={16} /> Save Changes
+                </span>
+                {/* Shiny effect overlay */}
+                <div className="absolute top-0 -inset-full h-full w-1/2 z-0 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/40 group-hover:animate-shine" />
+              </button>
 
-        {/* ==================== OTHER FIELDS ==================== */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1">
-            <EditableInput
-                label="Enrollment No"
-                field="enrollmentNo"
-                value={editData.enrollmentNo}
-                {...editableProps}
-            />
+            </div>
           </div>
-          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1">
-            <EditableInput
-                label="Department"
-                field="dept"
-                value={editData.dept}
-                {...editableProps}
-            />
-          </div>
-          <div className="bg-white rounded-xl border border-[#dda15e]/20 p-1 md:col-span-2">
-            <EditableInput
-                label="Academic Batch"
-                field="batch"
-                value={editData.batch}
-                {...editableProps}
-            />
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* ==================== SAVE/DISCARD BUTTONS ==================== */}
-      {hasChanges && (
-        <div className="fixed bottom-8 right-8 flex flex-col sm:flex-row gap-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <button
-            onClick={discardChanges}
-            className="bg-white border-2 border-[#606c38]/20 px-6 py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#606c38] hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all shadow-lg"
-          >
-            <X size={16} /> Discard Changes
-          </button>
-          
-          <button
-            onClick={saveChanges}
-            className="bg-[#283618] border-2 border-[#283618] px-10 py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#fefae0] hover:bg-[#bc6c25] hover:border-[#bc6c25] transition-all shadow-lg shadow-[#283618]/20"
-          >
-            <Save size={16} /> Synchronize Profile
-          </button>
-        </div>
-      )}
     </div>
   );
 }

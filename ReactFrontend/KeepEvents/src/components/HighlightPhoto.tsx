@@ -262,323 +262,361 @@ function HighlightPhoto({ photo, onClick }: PhotoHighlightProps) {
   return (
     <div
       onClick={onClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xl p-4 transition-all"
+      className="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-xl p-4 transition-all duration-300 animate-in fade-in"
     >
+      {/* Close Button (Floating) - Orange */}
       <button
         type="button"
         onClick={onClick}
-        className="absolute top-6 right-6 text-white text-4xl font-light hover:scale-110 transition-transform z-10"
+        className="absolute top-6 right-6 group z-[60]"
       >
-        ×
+        <div className="w-12 h-12 rounded-full bg-orange-500 text-white shadow-lg shadow-orange-500/40 flex items-center justify-center group-hover:bg-orange-600 group-hover:scale-110 transition-all duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
       </button>
 
+      {/* Main Card */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-7xl h-[90vh] bg-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden border border-neutral-800/10"
+        className="
+          w-full max-w-7xl h-[90vh] 
+          bg-white rounded-[2.5rem] 
+          shadow-[0_0_60px_-15px_rgba(234,88,12,0.3)] 
+          flex flex-col lg:flex-row overflow-hidden 
+          border-4 border-white
+        "
       >
-        {/* Header Section */}
-        <div className="px-6 py-5 border-b border-black/5 flex items-center justify-between bg-gray-200">
-          
-          {/* Left: Description */}
-          <div className="flex-1 flex items-center gap-3">
-            <p className="text-xs text-black/60 font-medium uppercase tracking-wider line-clamp-1">
-              {photo.photoDesc || "No description provided"}
-            </p>
-          </div>
-
-          {/* Right: Actions (Metadata, Download & Delete) */}
-          <div className="flex items-center gap-2 ml-4">
+        
+        {/* ================= LEFT: Image Area (Deep Emerald Green) ================= */}
+        <div className="lg:w-2/3 h-1/2 lg:h-full bg-emerald-950 relative flex items-center justify-center overflow-hidden group">
             
-            {/* Download Button */}
-            <button
-              onClick={handleDownload}
-              className="p-1.5 rounded-full bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
-              title="Download Photo"
-            >
-              <Download className="w-4 h-4 text-black/50" />
-            </button>
+            {/* Soft decorative gradient behind image */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-emerald-900 to-emerald-950 z-0" />
 
-            {/* Metadata Section */}
-            {metadata && (
-              <div 
-                className="relative"
-                onMouseEnter={() => setShowMetadata(true)}
-                onMouseLeave={() => setShowMetadata(false)}
-              >
-                <button
-                  className="p-1.5 rounded-full bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
-                >
-                  <Info className="w-4 h-4 text-black/50" />
-                </button>
-
-                {/* Metadata Tooltip */}
-                <div
-                  className={`absolute top-full right-0 mt-3 w-80 max-h-[500px] bg-white rounded-lg shadow-2xl border border-neutral-200 overflow-hidden z-[100] transition-all duration-200 origin-top-right ${
-                    showMetadata ? "opacity-100 translate-y-0 visible" : "opacity-0 -translate-y-2 invisible"
+            {/* Main Image */}
+            <div className="w-full h-full flex items-center justify-center overflow-auto custom-scrollbar p-4 relative z-10">
+              {photo.photoFile ? (
+                <img
+                  src={photo.photoFile}
+                  alt={photo.photoDesc ?? "Photo"}
+                  onClick={() => setIsZoomed(!isZoomed)}
+                  className={`transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] select-none drop-shadow-2xl ${
+                    isZoomed ? "scale-[2] cursor-zoom-out" : "max-h-full max-w-full cursor-zoom-in object-contain"
                   }`}
-                >
-                  <div className="bg-neutral-800 px-4 py-3 border-b border-neutral-700">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white">
-                      Image Metadata
-                    </h3>
-                  </div>
-
-                  <div className="overflow-y-auto max-h-[400px] bg-white custom-scrollbar">
-                    {Object.entries(metadata).map(([sectionKey, sectionValue]) => {
-                      let sectionData = sectionValue;
-                      if (typeof sectionValue === 'string') {
-                        try {
-                          sectionData = JSON.parse(sectionValue);
-                        } catch (e) {
-                          sectionData = { value: sectionValue };
-                        }
-                      }
-
-                      if (!sectionData || (typeof sectionData === 'object' && Object.keys(sectionData).length === 0)) return null;
-
-                      return (
-                        <div key={sectionKey} className="border-b border-neutral-100 last:border-0">
-                          <div className="bg-neutral-50 px-4 py-2 sticky top-0 z-10 border-b border-neutral-100">
-                            <h4 className="text-[10px] font-black uppercase tracking-widest text-black">
-                              {sectionKey}
-                            </h4>
-                          </div>
-
-                          <div className="px-4 py-3 space-y-2">
-                            {typeof sectionData === 'object' ? (
-                              Object.entries(sectionData).map(([k, v]) => (
-                                <div key={k} className="flex justify-between items-start gap-4">
-                                  <span className="text-[9px] text-neutral-400 font-bold uppercase tracking-wide shrink-0">
-                                    {k}
-                                  </span>
-                                  <span className="text-[9px] font-medium text-neutral-800 text-right break-all">
-                                    {Array.isArray(v) ? v.join(', ') : String(v)}
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-[9px] font-medium text-neutral-800 break-all">
-                                {String(sectionData)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Delete Button */}
-            {photo.uploadedBy?.userid === currentUser?.userid && (
-              <button
-                className="bg-red-600 text-white rounded px-5 py-2 text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 transition flex-shrink-0 ml-2"
-                onClick={() => {
-                  setShowMetadata(false); 
-                  setConfirmDelete(true);
-                }}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Main content grid */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-0">
-          {/* Left: Image */}
-          <div className="lg:col-span-2 bg-black/50 flex items-center justify-center overflow-auto custom-scrollbar">
-            {photo.photoFile ? (
-              <img
-                src={photo.photoFile}
-                alt={photo.photoDesc ?? "Photo"}
-                onClick={() => setIsZoomed(!isZoomed)}
-                className={`object-contain select-none pointer-events-auto transition-transform duration-300 ease-in-out ${
-                  isZoomed ? "scale-[2] cursor-zoom-out" : "max-h-full max-w-full cursor-zoom-in"
-                }`}
-                onContextMenu={(e) => e.preventDefault()}
-                draggable={false}
-              />
-            ) : (
-              <span className="text-neutral-500 font-mono text-xs uppercase">No image</span>
-            )}
-          </div>
-
-          {/* Right: Details + Likes + Comments */}
-          <div className="lg:col-span-1 bg-gray-200 flex flex-col border-l border-neutral-200 overflow-hidden">
-            {/* Info Section */}
-            <div className="px-6 py-4 border-b border-neutral-100 flex-shrink-0 overflow-y-auto max-h-1/3 custom-scrollbar">
-              <h3 className="text-xs font-black text-black mb-4 uppercase tracking-widest">Info</h3>
-
-              <div className="space-y-3 text-xs text-neutral-800">
-                {photo.extractedTags && photo.extractedTags.length > 0 && (
-                  <div>
-                    <span className="font-bold block mb-2 text-[10px] uppercase text-neutral-400">Tags</span>
-                    <div className="flex flex-wrap gap-1">
-                      {photo.extractedTags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 border border-black/10 rounded-sm text-[10px] font-bold text-black uppercase"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4 pt-2">
-                  <div>
-                    <span className="font-bold text-[10px] uppercase text-neutral-400 block">Uploaded</span>
-                    <span className="font-medium">
-                      {photo.uploadDate ? new Date(photo.uploadDate).toLocaleDateString() : "—"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-[10px] uppercase text-neutral-400 block">By</span>
-                    <span className="font-medium">@{photo.uploadedBy?.username}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-[10px] uppercase text-neutral-400 block">Views</span>
-                    <span className="font-medium">{photo.viewcount ?? 0}</span>
-                  </div>
-                  <div>
-                    <span className="font-bold text-[10px] uppercase text-neutral-400 block">People</span>
-                    <span className="font-medium">{photo.FaceCount ?? 0}</span>
-                  </div>
-                </div>
-
-                {photo.event && (
-                  <div className="pt-1">
-                    <span className="font-bold text-[10px] uppercase text-neutral-400 block mb-1">Event</span>
-                    <span className="text-black font-medium border-b border-black/10 pb-0.5">
-                      {photo.event.eventname}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {photo.FaceCount > 0 && photo.Faces && (
-                <div className="mt-4 pt-4 border-t border-neutral-100">
-                  <span className="font-bold block mb-2 text-[10px] uppercase text-neutral-400">
-                    People in photo ({photo.FaceCount})
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {photo.Faces.map((face) => (
-                      <span
-                        key={face.userid}
-                        className="px-2 py-1 bg-black/50 text-white rounded-sm text-[10px] font-bold uppercase tracking-wide"
-                      >
-                        @{face.username}
-                      </span>
-                    ))}
-                  </div>
+                  onContextMenu={(e) => e.preventDefault()}
+                  draggable={false}
+                />
+              ) : (
+                <div className="flex flex-col items-center opacity-50 text-emerald-200/50">
+                   <span className="text-4xl mb-2">🌿</span>
+                   <span className="text-xs font-bold uppercase tracking-widest">No Image</span>
                 </div>
               )}
             </div>
-
-            {/* Interactions Section */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-neutral-50/50">
-              <div className="px-6 py-3 border-b border-neutral-200/50 flex-shrink-0 bg-gray-200">
-                <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em]">Likes ({likes.length})</h4>
-              </div>
-
-              <div className="flex-shrink-0 overflow-y-auto px-6 py-3 max-h-[100px] border-b border-neutral-200/50">
-                <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  {likes.length === 0 && !loadingLikes && <div className="text-[11px] text-neutral-400 italic">No likes yet</div>}
-                  {likes.map((like, idx) => (
-                    <div key={like.user.username + idx} className="text-[11px] font-bold text-black">
-                      @{like.user.username}
-                    </div>
-                  ))}
-                  {nextLikesUrl && <div ref={likesSentinelRef} className="h-4 w-full" />}
-                </div>
-              </div>
-
-              <div className="px-6 py-3 border-b border-neutral-200/50 flex-shrink-0 bg-gray-200">
-                <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em]">Comments ({comments.length})</h4>
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-6 py-2">
-                <div className="space-y-4 pt-2">
-                  {comments.length === 0 && !loadingComments && <div className="text-[11px] text-neutral-400 italic">No comments yet</div>}
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="flex flex-col group border-b border-black/5 pb-2 last:border-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="text-[10px] font-black text-black uppercase tracking-wide">@{comment.user.username}</div>
-                        {currentUser && comment.user.userid === currentUser.userid && (
-                          <button
-                            onClick={() => setDeleteCommentId(comment.id)}
-                            className="text-[9px] text-black font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <div className="text-xs text-neutral-800 leading-relaxed font-medium">{comment.commentText}</div>
-                    </div>
-                  ))}
-                  {nextCommentsUrl && <div ref={commentsSentinelRef} className="h-4 w-full" />}
-                </div>
-              </div>
-
-              <form onSubmit={handleAddComment} className="p-4 border-t border-neutral-200 bg-gray-200 flex-shrink-0">
-                <div className="flex items-center gap-2 bg-neutral-100 rounded-lg px-4 py-2 border border-transparent focus-within:border-black/10 transition-colors">
-                  <input
-                    type="text"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="ADD A COMMENT..."
-                    className="flex-1 text-[10px] outline-none bg-transparent text-black font-bold uppercase tracking-wide"
-                    disabled={addingComment}
-                  />
-                  <button type="submit" disabled={!newComment.trim() || addingComment} className="text-[10px] font-black text-black uppercase">
-                    {addingComment ? "…" : "Post"}
-                  </button>
-                </div>
-              </form>
+            
+            {/* Floating Controls (Green/Orange theme) */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-4 group-hover:translate-y-0 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full border border-white/20 z-20 shadow-xl">
+               <button onClick={handleDownload} className="text-white hover:text-orange-400 transition-colors flex items-center gap-2" title="Download">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+               </button>
+               <div className="w-px h-5 bg-white/20"></div>
+               <button onClick={() => setIsZoomed(!isZoomed)} className="text-white hover:text-green-400 transition-colors" title="Zoom">
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+               </button>
             </div>
+        </div>
+
+        {/* ================= RIGHT: Sidebar (White with Orange/Green Accents) ================= */}
+        <div className="lg:w-1/3 h-1/2 lg:h-full bg-white flex flex-col relative z-30">
+          
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-orange-100 flex-shrink-0 bg-white z-20">
+             <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-black text-emerald-950 leading-snug break-words">
+                    {photo.photoDesc || <span className="text-emerald-800/40 italic font-normal">Untitled Memory</span>}
+                  </h3>
+                  {photo.event && (
+                    <div className="mt-2 flex items-center gap-2">
+                       <span className="px-2 py-0.5 rounded bg-orange-100 text-[10px] font-bold uppercase tracking-wide text-orange-700">
+                         {photo.event.eventname}
+                       </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 shrink-0">
+                   {/* Metadata Toggle */}
+                   {metadata && (
+                    <div 
+                      className="relative group/meta"
+                      onMouseEnter={() => setShowMetadata(true)}
+                      onMouseLeave={() => setShowMetadata(false)}
+                    >
+                      <button className="w-9 h-9 rounded-full bg-green-50 hover:bg-green-100 text-green-600 flex items-center justify-center transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      </button>
+                      
+                      {/* Metadata Popup */}
+                      <div
+                        className={`absolute top-full right-0 mt-2 w-80 max-h-[500px] bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(22,163,74,0.3)] border border-green-100 z-50 transition-all duration-200 origin-top-right overflow-hidden ${
+                          showMetadata ? "opacity-100 translate-y-0 visible" : "opacity-0 -translate-y-2 invisible"
+                        }`}
+                      >
+                         <div className="bg-emerald-50 px-5 py-3 border-b border-emerald-100">
+                           <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Image Data</span>
+                         </div>
+                         <div className="overflow-y-auto max-h-[400px] custom-scrollbar">
+                           {Object.entries(metadata).map(([sectionKey, sectionValue]) => {
+                              let sectionData = sectionValue;
+                              if (typeof sectionValue === 'string') {
+                                try { sectionData = JSON.parse(sectionValue); } 
+                                catch (e) { sectionData = { value: sectionValue }; }
+                              }
+                              if (!sectionData || (typeof sectionData === 'object' && Object.keys(sectionData).length === 0)) return null;
+
+                              return (
+                                <div key={sectionKey} className="border-b border-green-50 last:border-0 p-4 hover:bg-green-50/30 transition-colors">
+                                  <h4 className="text-[9px] font-black uppercase tracking-widest text-orange-500 mb-2">
+                                    {sectionKey}
+                                  </h4>
+                                  <div className="space-y-1.5">
+                                    {typeof sectionData === 'object' ? (
+                                      Object.entries(sectionData).map(([k, v]) => (
+                                        <div key={k} className="flex justify-between items-start gap-3">
+                                          <span className="text-[9px] text-emerald-800/50 font-bold uppercase tracking-wide shrink-0">{k}</span>
+                                          <span className="text-[10px] font-medium text-emerald-900 text-right break-all">
+                                            {Array.isArray(v) ? v.join(', ') : String(v)}
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="text-[10px] font-medium text-emerald-900 break-all">{String(sectionData)}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                           })}
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delete Button */}
+                  {photo.uploadedBy?.userid === currentUser?.userid && (
+                    <button
+                      onClick={() => { setShowMetadata(false); setConfirmDelete(true); }}
+                      className="w-9 h-9 rounded-full bg-orange-50 hover:bg-red-50 text-orange-400 hover:text-red-500 flex items-center justify-center transition-colors"
+                      title="Delete Photo"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  )}
+                </div>
+             </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
+               <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-orange-400 block mb-1">Uploaded By</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-400 to-red-400 flex items-center justify-center text-[8px] font-black text-white">
+                      {photo.uploadedBy?.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-xs font-bold text-emerald-900">@{photo.uploadedBy?.username}</span>
+                  </div>
+               </div>
+               <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-orange-400 block mb-1">Date</span>
+                  <span className="text-xs font-bold text-emerald-900">
+                    {photo.uploadDate ? new Date(photo.uploadDate).toLocaleDateString() : "—"}
+                  </span>
+               </div>
+               <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-orange-400 block mb-1">Views</span>
+                  <span className="text-xs font-bold text-emerald-900">{photo.viewcount ?? 0}</span>
+               </div>
+               <div>
+                  <span className="text-[9px] font-black uppercase tracking-widest text-orange-400 block mb-1">People</span>
+                  <span className="text-xs font-bold text-emerald-900">{photo.FaceCount ?? 0}</span>
+               </div>
+            </div>
+
+            {/* Tags & Faces */}
+            {((photo.extractedTags && photo.extractedTags.length > 0) || photo.FaceCount > 0) && (
+              <div className="space-y-3">
+                 <h4 className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">Tags & People</h4>
+                 <div className="flex flex-wrap gap-2">
+                  {photo.extractedTags?.map((tag) => (
+                    <span key={tag} className="px-3 py-1 bg-white border border-green-200 rounded-full text-[10px] font-black uppercase text-green-700 shadow-sm hover:border-green-400 cursor-default transition-colors">
+                      #{tag}
+                    </span>
+                  ))}
+                  {photo.Faces?.map((face) => (
+                    <span key={face.userid} className="px-3 py-1 bg-orange-50 border border-orange-200 rounded-full text-[10px] font-black uppercase text-orange-700 flex items-center gap-1 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                      @{face.username}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="w-full h-px bg-orange-100" />
+
+            {/* Likes Section */}
+            <div className="space-y-3">
+               <h4 className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em] flex items-center gap-2">
+                 <span>Likes ({likes.length})</span>
+                 <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd"></path></svg>
+               </h4>
+               
+               <div className="flex flex-wrap gap-x-2 gap-y-1">
+                 {likes.length === 0 && !loadingLikes && (
+                   <span className="text-xs text-emerald-800/40 italic">No likes yet.</span>
+                 )}
+                 {likes.map((like, idx) => (
+                    <span key={like.user.username + idx} className="text-xs font-bold text-emerald-800 hover:text-orange-500 cursor-pointer transition-colors">
+                      @{like.user.username}{idx < likes.length - 1 ? ',' : ''}
+                    </span>
+                 ))}
+                 {nextLikesUrl && <div ref={likesSentinelRef} className="h-4 w-full" />}
+               </div>
+            </div>
+
+            <div className="w-full h-px bg-orange-100" />
+
+            {/* Comments Section */}
+            <div className="space-y-4">
+               <h4 className="text-[10px] font-black text-emerald-300 uppercase tracking-[0.2em]">
+                 Comments ({comments.length})
+               </h4>
+               
+               <div className="space-y-4">
+                 {comments.length === 0 && !loadingComments && (
+                   <div className="text-center py-6 bg-green-50/50 rounded-xl border border-dashed border-green-200">
+                      <p className="text-xs text-green-700/50 font-bold uppercase tracking-wide">No comments yet</p>
+                   </div>
+                 )}
+                 
+                 {comments.map((comment) => (
+                   <div key={comment.id} className="group flex gap-3 animate-in slide-in-from-bottom-2 duration-300">
+                     <div className="w-8 h-8 rounded-full bg-white flex-shrink-0 flex items-center justify-center text-[10px] font-black text-emerald-600 border border-green-100 shadow-sm">
+                        {comment.user.username.charAt(0).toUpperCase()}
+                     </div>
+                     <div className="flex-1 bg-white rounded-2xl rounded-tl-none p-3 relative border border-green-50 shadow-sm group-hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start mb-1">
+                           <span className="text-[10px] font-black text-emerald-900 uppercase tracking-wide">@{comment.user.username}</span>
+                           {currentUser && comment.user.userid === currentUser.userid && (
+                            <button 
+                              onClick={() => setDeleteCommentId(comment.id)} 
+                              className="text-emerald-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                              title="Delete Comment"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                           )}
+                        </div>
+                        <p className="text-xs text-emerald-800 font-medium leading-relaxed">{comment.commentText}</p>
+                     </div>
+                   </div>
+                 ))}
+                 {nextCommentsUrl && <div ref={commentsSentinelRef} className="h-6 w-full flex items-center justify-center">
+                    {loadingComments && <div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin"></div>}
+                 </div>}
+               </div>
+            </div>
+          </div>
+
+          {/* Add Comment Input */}
+          <div className="p-4 border-t border-orange-100 bg-white z-30">
+            <form onSubmit={handleAddComment} className="relative group/form">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="w-full bg-orange-50/50 border border-orange-100 rounded-full pl-5 pr-14 py-3.5 text-xs font-bold text-emerald-900 outline-none focus:bg-white focus:border-orange-300 focus:ring-4 focus:ring-orange-100 transition-all placeholder:text-orange-300"
+                disabled={addingComment}
+              />
+              <button 
+                type="submit" 
+                disabled={!newComment.trim() || addingComment}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 bg-orange-500 hover:bg-orange-600 disabled:bg-stone-200 rounded-full flex items-center justify-center text-white transition-all shadow-md shadow-orange-500/20 hover:scale-105"
+              >
+                 {addingComment ? (
+                   <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"/>
+                 ) : (
+                   <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                 )}
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* Modals */}
+        {/* ================= MODALS ================= */}
+        
+        {/* Delete Photo Confirmation */}
         {confirmDelete && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-gray-200 rounded-lg p-8 w-full max-w-sm shadow-2xl text-center border border-black/10" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-black text-black uppercase tracking-tight mb-2">Delete photo?</h3>
-              <p className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest mb-6">This action is permanent.</p>
-              <div className="flex flex-col gap-3">
-                <button className="w-full py-3 rounded bg-black/50 text-white text-xs font-black uppercase" onClick={handleDelete} disabled={deleting}>
-                  {deleting ? "Deleting…" : "Yes, delete"}
-                </button>
-                <button className="w-full py-3 rounded border border-black/10 text-black text-xs font-black uppercase" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+          <div className="absolute inset-0 z-[100] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-red-100 text-center scale-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </div>
+              <h3 className="text-xl font-black text-emerald-950 mb-2 tracking-tight">Delete this memory?</h3>
+              <p className="text-sm text-emerald-800/60 mb-8 font-medium">This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button 
+                  className="flex-1 py-3.5 rounded-xl bg-stone-100 text-stone-600 text-xs font-black uppercase tracking-wider hover:bg-stone-200 transition-colors" 
+                  onClick={() => setConfirmDelete(false)} 
+                  disabled={deleting}
+                >
                   Cancel
+                </button>
+                <button 
+                  className="flex-1 py-3.5 rounded-xl bg-red-500 text-white text-xs font-black uppercase tracking-wider hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all hover:scale-105" 
+                  onClick={handleDelete} 
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Yes, Delete"}
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Delete Comment Confirmation */}
         {deleteCommentId !== null && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-gray-200 rounded-lg p-8 w-full max-w-sm shadow-2xl text-center border border-black/10" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-black text-black uppercase tracking-tight mb-6">Delete comment?</h3>
+          <div className="absolute inset-0 z-[100] flex items-center justify-center backdrop-blur-md animate-in fade-in duration-200">
+             <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-stone-100 text-center scale-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-black text-emerald-950 mb-6 tracking-tight">Remove comment?</h3>
               <div className="flex gap-3">
                 <button
-                  className="flex-1 py-3 rounded bg-black/50 text-white text-xs font-black uppercase"
+                  className="flex-1 py-3.5 rounded-xl bg-red-500 text-white text-xs font-black uppercase tracking-wider hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all hover:scale-105"
                   onClick={() => deleteCommentId !== null && handleDeleteComment(deleteCommentId)}
                   disabled={deletingComment}
                 >
-                  {deletingComment ? "Deleting…" : "Yes"}
+                  {deletingComment ? "..." : "Yes"}
                 </button>
-                <button className="flex-1 py-3 rounded border border-black/10 text-black text-xs font-black uppercase" onClick={() => setDeleteCommentId(null)} disabled={deletingComment}>
+                <button 
+                  className="flex-1 py-3.5 rounded-xl bg-stone-100 text-stone-600 text-xs font-black uppercase tracking-wider hover:bg-stone-200 transition-colors" 
+                  onClick={() => setDeleteCommentId(null)} 
+                  disabled={deletingComment}
+                >
                   No
                 </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

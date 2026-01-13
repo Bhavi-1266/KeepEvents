@@ -115,3 +115,22 @@ export async function getMe() {
 export async function checkAuth() {
   
 }
+
+export async function resetPassword(userEmail: string,newPassword: string) {
+  const body = {
+    email: userEmail,
+    new_password: newPassword,
+  };
+  const response = await fetch(`/api/users/reset-password/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to reset password");
+  }
+  return response.json();
+}
