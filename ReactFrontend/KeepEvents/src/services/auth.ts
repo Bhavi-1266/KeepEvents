@@ -17,7 +17,9 @@ export async function login(userEmail: string, password: string) {
 
   if (!response.ok) {
     logout();
-    throw new Error("Invalid userEmail or password");
+    return response.json().then((data) => {
+      throw new Error(data.message || "Login failed");
+    });
   }
   return response.json();
 }
@@ -132,5 +134,27 @@ export async function resetPassword(userEmail: string,newPassword: string) {
   if (!response.ok) {
     throw new Error("Failed to reset password");
   }
+  return response.json();
+}
+
+export async function OmniportOAuth() {
+  // 1. Define your backend URL explicitly
+  const BACKEND_URL = "http://127.0.0.1:8000"; 
+  
+  // 2. Use the full URL in the fetch
+  const response = await fetch(`${BACKEND_URL}/auth/omniport/login/`, {
+    method: "GET",
+    // 'include' is required for session cookies
+    credentials: "include", 
+    headers: {
+        "Content-Type": "application/json",
+    }
+  });
+
+  // 3. Check for errors before parsing
+  if (!response.ok) {
+    throw new Error(`Error: ${response.status} ${response.statusText}`);
+  }
+
   return response.json();
 }

@@ -18,7 +18,8 @@ function Login() {
       navigate("/HomePage");
       toast.success("Login successful");
     } catch (err) {
-      setError("Invalid credentials");
+      setError((err as Error).message || "Login failed");
+      console.error("Login error:", err);
     }
   }
 

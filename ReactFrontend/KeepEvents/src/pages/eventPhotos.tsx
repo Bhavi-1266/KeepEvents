@@ -981,7 +981,7 @@ function EventPhotos() {
         
         {/* Highlight Photo Modal */}
         {selectedPhoto && !selectionMode && (
-          <div className="fixed inset-0 z-[100] bg-white/95 backdrop-blur-3xl animate-in fade-in">
+          <div className="fixed inset-0 z-[100]  backdrop-blur-md animate-in fade-in">
              <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />
           </div>
         )}

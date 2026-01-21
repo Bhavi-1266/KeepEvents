@@ -81,7 +81,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = users
-        fields = ["email", "username", "password"]
+        fields = ["email", "username", "password",'is_active', 'userid' ]
         extra_kwargs = {
             'password': {'write_only': True}, 
             "username": {"validators": []},  # 🔴 disable default UniqueValidator

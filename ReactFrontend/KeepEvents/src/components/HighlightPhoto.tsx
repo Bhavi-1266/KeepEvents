@@ -262,7 +262,7 @@ function HighlightPhoto({ photo, onClick }: PhotoHighlightProps) {
   return (
     <div
       onClick={onClick}
-      className="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-xl p-4 transition-all duration-300 animate-in fade-in"
+      className="fixed inset-0 z-[200] flex items-center justify-center  p-4 transition-all duration-300 animate-in fade-in"
     >
       {/* Close Button (Floating) - Orange */}
       <button
@@ -281,7 +281,7 @@ function HighlightPhoto({ photo, onClick }: PhotoHighlightProps) {
       <div
         onClick={(e) => e.stopPropagation()}
         className="
-          w-full max-w-7xl h-[90vh] 
+          w-[65%] max-w-7xl h-[90vh] 
           bg-white rounded-[2.5rem] 
           shadow-[0_0_60px_-15px_rgba(234,88,12,0.3)] 
           flex flex-col lg:flex-row overflow-hidden 

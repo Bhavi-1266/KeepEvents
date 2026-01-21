@@ -564,7 +564,7 @@ function HomePage() {
               </div>
             )}
           </div>
-        </section>
+        </section>onLoggedOut
 
           {/* SELECTION BAR */}
           {selectionMode && (
@@ -583,7 +583,7 @@ function HomePage() {
 
         {/* MODALS & OVERLAYS */}
         {selectedPhoto && !selectionMode && (
-          <div className="fixed inset-0 z-[100] bg-white/90 backdrop-blur-3xl animate-in fade-in">
+          <div className="fixed inset-0 z-[100]   animate-in fade-in">
              <HighlightPhoto photo={selectedPhoto} onClick={() => setSelectedPhoto(null)} />
           </div>
         )}

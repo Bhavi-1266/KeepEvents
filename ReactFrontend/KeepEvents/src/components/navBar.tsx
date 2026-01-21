@@ -81,7 +81,7 @@ function NavBar() {
           </NavLink>
           {/* Vertical Divider */}
           <div className="h-8 w-[1px] bg-[#283618]/10"></div>
-          <LogoutButton onLoggedOut={() => navigate("/login")} />
+          <LogoutButton onLoggedOut={() => navigate("/")} />
         </div>
 
         {/* Mobile Menu Backdrop */}
@@ -134,7 +134,7 @@ function NavBar() {
               </NavLink>
               <div className="mt-4 px-4">
                 <LogoutButton onLoggedOut={() => {
-                  navigate("/login");
+                  navigate("/");
                   setIsMenuOpen(false);
                 }} />
               </div>

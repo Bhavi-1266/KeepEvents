@@ -1,9 +1,24 @@
 import { useNavigate } from "react-router-dom";
-import EntryBox from "../components/EntryBox";
+import { OmniportOAuth } from "../services/auth";
 import "../styles/loginPage.css";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const handleOmniportLogin = async () => {
+    try {
+      const data = await OmniportOAuth();
+      
+      // Redirect the browser to the URL returned by Django
+      if (data.url) {
+        console.log("Redirecting to:", data.url);
+        window.location.href = data.url;
+      } else {
+        console.error("No URL returned from login endpoint");
+      }
+    } catch (error) {
+      console.error("Omniport login error:", error);
+    }
+  };
   return (
   <div className="relative min-h-screen w-full flex items-center justify-center bg-white font-sans overflow-hidden">
     
@@ -106,6 +121,20 @@ function LoginPage() {
             <div className="flex flex-col items-start text-left">
               <span className="text-xl font-bold tracking-tight">Register</span>
               <span className="text-xs text-slate-400">Join our community</span>
+            </div>
+            <div className="p-3 rounded-full bg-slate-50 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+          </button>
+          <button 
+            onClick={handleOmniportLogin}
+            className="group flex items-center justify-between w-full p-6 bg-white border border-slate-100 text-slate-900 rounded-[1.8rem] transition-all duration-300 hover:border-blue-200 hover:shadow-lg active:scale-95"
+          >
+            <div className="flex flex-col items-start text-left">
+              <span className="text-xl font-bold tracking-tight">Login with Omniport</span>
+              <span className="text-xs text-slate-400">Use your Omniport account</span>
             </div>
             <div className="p-3 rounded-full bg-slate-50 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

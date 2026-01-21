@@ -87,11 +87,12 @@ function EventCard({ event, onClick }: EventCardProps) {
           {/* Creator */}
           <div className="flex items-center gap-2">
              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#ff9999] to-[#ffcc99] flex items-center justify-center text-[8px] font-black text-white">
-                {event.eventCreator_detail.username.charAt(0).toUpperCase()}
+                {event.eventCreator_detail? event.eventCreator_detail.username.charAt(0).toUpperCase() : "U"}
              </div>
              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-               {event.eventCreator_detail.username}
+               {event.eventCreator_detail? event.eventCreator_detail.username : "Unknown User"}
              </span>
+           
           </div>
         </div>
       </div>
