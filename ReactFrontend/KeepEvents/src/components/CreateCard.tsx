@@ -14,7 +14,7 @@ function CreateCard({ ToCreate, onClick }: CreateCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative h-full min-h-[300px] flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] cursor-pointer hover:border-[#99c0ff] hover:bg-slate-50/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/50 overflow-hidden"
+      className="group relative h-full min-h-[300px] min-w-[250px] flex flex-col items-center justify-center bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] cursor-pointer hover:border-[#99c0ff] hover:bg-slate-50/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-100/50 overflow-hidden"
     >
       {/* Background decoration on hover */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />

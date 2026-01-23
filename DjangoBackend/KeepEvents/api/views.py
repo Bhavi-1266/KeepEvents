@@ -632,7 +632,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
             serializer = self.get_serializer(data=data)
             if serializer.is_valid():
-                photo = serializer.save(uploadedBy=request.user)
+                photo = serializer.save(uploadedBy=user)
 
                 # track affected events
                 affected_event_ids.add(photo.event.eventid)
