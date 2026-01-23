@@ -25,3 +25,13 @@ def send_to_event(event_id, event, data):
         }
     )
     
+def send_to_all(event, data):
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        "broadcast",
+        {
+            "type": "broadcast",
+            "event": event,
+            "data": data,
+        }
+    )

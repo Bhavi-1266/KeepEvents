@@ -43,6 +43,12 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
             self.event_groups.append(group)
             await self.channel_layer.group_add(group, self.channel_name)
 
+        
+        await self.channel_layer.group_add(
+            "broadcast",
+            self.channel_name,
+            )           
+        
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -57,6 +63,10 @@ class RealtimeConsumer(AsyncWebsocketConsumer):
                 group,
                 self.channel_name,
             )
+        await self.channel_layer.group_discard(
+            "broadcast",
+            self.channel_name,
+            )  
 
     async def broadcast(self, event):
         await self.send(text_data=json.dumps({

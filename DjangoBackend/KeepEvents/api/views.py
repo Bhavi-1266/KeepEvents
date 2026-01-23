@@ -25,7 +25,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from guardian.shortcuts import get_objects_for_user
 from .utils import set_event_perms
-from realtime.utils import send_to_event , send_to_user
+from realtime.utils import send_to_event , send_to_user , send_to_all
 
 from django.db.models import Q
 
@@ -602,7 +602,7 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
     def bulk_create(self, request):
         permission_classes = [IsAuthenticated, canAddPhoto]
-
+        user = request.user
         files = request.FILES.getlist("photoFile")
         descs = request.data.getlist("photoDesc")
         event_ids = request.data.getlist("event_id")
@@ -648,15 +648,14 @@ class PhotoViewSet(viewsets.ModelViewSet):
         invalidate_all_users_cache()
 
         # 🔔 notify ALL viewers of affected events
-        for eventid in affected_event_ids:
-            send_to_event(
-                event_id=eventid,
-                event="event_photos_changed",
-                data={
-                    "eventid": eventid,
-                    "action": "Reload",
-                }
-            )
+        send_to_all(
+            event="ReloadPhotos",
+            data={
+                "userid": user.userid,
+                "action": "Added",
+                "eventid" : photo.event.eventid,
+            }
+        )
 
 
         return Response(
@@ -700,17 +699,16 @@ class PhotoViewSet(viewsets.ModelViewSet):
 
         # invalidate cache ONCE
         invalidate_all_users_cache()
-
+        user = request.user
         # 🔔 notify all viewers of affected events
-        for eventid in affected_event_ids:
-            send_to_event(
-                eventid,
-                "event_photos_changed",
-                {
-                    "eventid": eventid,
-                    "action": "reload",
-                }
-            )
+        send_to_all(
+            event="ReloadPhotos",
+            data={
+                "userid": user.userid,
+                "action": "Deleted",
+                "eventid" : photo.event.eventid,
+            }
+        )
 
         return Response(
             {"deleted": deleted, "skipped_no_permission": skipped},

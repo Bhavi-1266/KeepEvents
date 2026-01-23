@@ -232,7 +232,7 @@ function EventPhotos() {
     useEffect(() => {
       if (!eventId) return;
 
-      const unsubscribe = subscribe("event_photos_changed", (data) => {
+      const unsubscribe = subscribe("ReloadPhotos", (data) => {
         if (data.eventid !== Number(eventId)) return;
         toast.success("Event updated");
         
