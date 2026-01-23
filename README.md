@@ -478,14 +478,14 @@ Save Photo Record
 ---
 
 ## 17. Video Walkthrough (Suggested)
+  [![Video Title](https://img.youtube.com/vi/gM5b7_-bkL4/0.jpg)](https://youtu.be/gM5b7_-bkL4)  
 
 **Suggested structure for a demo video:**
 1. System overview
 2. Auth & OTP flow
 3. Event creation & invites
 4. Photo upload & realtime updates
-5. Activity analytics
-
+5. Activity analytics 
 ---
 
 ## 18. Production Deployment Notes

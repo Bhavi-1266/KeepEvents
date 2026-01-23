@@ -8,16 +8,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import HighlightPhoto from "../components/HighlightPhoto.tsx";
 import CreateCard from "../components/CreateCard.tsx";
 import AddPhotosModal from "../components/AddPhotosModal.tsx";
-import type { User } from "../types/user";
+import type { User } from "../types/user.ts";
 import { getMe } from "../services/auth.ts";
 import { removeEventViewer  , removeEventEditor} from "../services/events.ts";
 import NavBar from "../components/navBar.tsx";
-import SelectionBar from "../components/selectionBar";
+import SelectionBar from "../components/selectionBar.tsx";
 import { toast } from "react-hot-toast";
 import { Eye, Users, Edit3, Save, X, Pencil, Eraser, Camera, Download } from "lucide-react";
 
 import JSZip from "jszip";
-import { useWebSocket } from "../contexts/WebSocketContext";
+import { useWebSocket } from "../contexts/WebSocketContext.tsx";
 
 
 
@@ -227,37 +227,26 @@ function EventPhotos() {
 
   }
 
-  // ✅ Connect to WebSocket ONCE when user is available
-    // useEffect(() => {
-    //   if (!currentUser) return;
-
-    //   connectSocket(currentUser.userid);
-
-    //   // Cleanup on unmount only
-    //   return () => {
-    //     disconnectSocket();
-    //   };
-    // }, [currentUser]); // Only reconnect if userId changes
-
+ 
     // ✅ Subscribe to event photo changes
-    // useEffect(() => {
-    //   if (!eventId) return;
+    useEffect(() => {
+      if (!eventId) return;
 
-    //   const unsubscribe = subscribe("event_photos_changed", (data) => {
-    //     if (data.eventid !== Number(eventId)) return;
-    //     toast.success("Event updated");
+      const unsubscribe = subscribe("event_photos_changed", (data) => {
+        if (data.eventid !== Number(eventId)) return;
+        toast.success("Event updated");
         
-    //     // Reload photos
-    //     LoadEventPhotos(Number(eventId), 0).then((photosData) => {
-    //       setPhotos(photosData.results || []);
-    //       setNextUrl(photosData.next || null);
-    //     });
-    //   });
+        // Reload photos
+        LoadEventPhotos(Number(eventId), 0).then((photosData) => {
+          setPhotos(photosData.results || []);
+          setNextUrl(photosData.next || null);
+        });
+      });
 
-    //   return () => {
-    //     unsubscribe();
-    //   };
-    // }, [eventId , subscribe]); // Only resubscribe if eventId changes
+      return () => {
+        unsubscribe();
+      };
+    }, [eventId , subscribe]); // Only resubscribe if eventId changes
 
     // ✅ Subscribe to photo likes
     useEffect(() => {

@@ -564,7 +564,7 @@ function HomePage() {
               </div>
             )}
           </div>
-        </section>onLoggedOut
+        </section>
 
           {/* SELECTION BAR */}
           {selectionMode && (

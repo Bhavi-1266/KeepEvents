@@ -385,7 +385,7 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-FRONTEND_URL = "http://localhost:5173"
+FRONTEND_URL = "http://127.0.0.1:5173"
 
 #c==========================
 
